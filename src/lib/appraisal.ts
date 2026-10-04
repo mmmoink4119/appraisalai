@@ -51,6 +51,7 @@ export const CompSchema = PropertySchema.extend({
   financing: z.string().nullable().describe("e.g. Conventional, FHA, VA, Cash"),
   concessions: z.number().nullable().describe("Seller concessions in dollars"),
   dataSource: z.string().nullable().describe("e.g. MLS name and listing number"),
+  remarks: z.string().nullable().describe("Public listing remarks from the MLS"),
 });
 export type Comp = z.infer<typeof CompSchema>;
 
@@ -69,7 +70,7 @@ export function emptyProperty(): Property {
 export function emptyComp(): Comp {
   return {
     ...emptyProperty(), status: null, salePrice: null, saleDate: null, listPrice: null, daysOnMarket: null,
-    saleType: null, financing: null, concessions: null, dataSource: null,
+    saleType: null, financing: null, concessions: null, dataSource: null, remarks: null,
   };
 }
 
@@ -178,3 +179,14 @@ export const CommentsSchema = z.object(
 export function emptyComments(): Comments {
   return Object.fromEntries(COMMENT_SECTIONS.map((s) => [s.key, ""])) as Comments;
 }
+
+// AI-suggested UAD ratings for one property, for the appraiser to accept or ignore.
+export const RatingSuggestionSchema = z.object({
+  index: z.number().describe("The property's index as given in the input"),
+  condition: z.number().nullable().describe("Suggested UAD condition 1-6, or null if the remarks don't support one"),
+  quality: z.number().nullable().describe("Suggested UAD quality 1-6, or null if the remarks don't support one"),
+  confidence: z.enum(["low", "medium", "high"]),
+  reason: z.string().describe("One or two sentences citing the remarks that support the ratings"),
+});
+export type RatingSuggestion = z.infer<typeof RatingSuggestionSchema>;
+export const RatingSuggestionListSchema = z.object({ suggestions: z.array(RatingSuggestionSchema) });

@@ -47,7 +47,7 @@ export const IMPORT_FIELDS = [
   "status", "salePrice", "saleDate", "listPrice", "daysOnMarket", "saleType", "financing", "concessions", "dataSource",
   "address", "city", "state", "zip", "county", "parcelNumber", "yearBuilt", "gla", "lotSizeSqFt",
   "bedrooms", "fullBaths", "halfBaths", "basementSqFt", "basementFinishedSqFt", "garageSpaces",
-  "design", "condition", "quality", "fireplaces", "pool", "heatingCooling", "view",
+  "design", "condition", "quality", "fireplaces", "pool", "heatingCooling", "view", "remarks",
 ] as const satisfies readonly (keyof Comp)[];
 export type ImportField = (typeof IMPORT_FIELDS)[number];
 
@@ -73,6 +73,18 @@ export const ColumnMappingSchema = z.object({
   ),
 });
 export type ColumnMapping = z.infer<typeof ColumnMappingSchema>["mappings"];
+
+// MLS exports often carry HTML entities in free text, e.g. "you&#x2019;re".
+function decodeEntities(s: string): string {
+  const named: Record<string, string> = { amp: "&", lt: "<", gt: ">", quot: '"', apos: "'", nbsp: " " };
+  return s.replace(/&(#x[0-9a-f]+|#\d+|[a-z]+);/gi, (m, code: string) => {
+    if (code[0] === "#") {
+      const n = code[1].toLowerCase() === "x" ? parseInt(code.slice(2), 16) : parseInt(code.slice(1), 10);
+      return Number.isFinite(n) ? String.fromCodePoint(n) : m;
+    }
+    return named[code.toLowerCase()] ?? m;
+  });
+}
 
 function toNumber(cell: string): number | null {
   const m = cell.replace(/[$,\s]/g, "").match(/-?\d+(\.\d+)?/);
@@ -108,7 +120,7 @@ export function applyTransform(cell: string, transform: Transform): string | num
   if (!s) return null;
   switch (transform) {
     case "text":
-      return s;
+      return decodeEntities(s);
     case "number":
       return toNumber(s);
     case "date":
@@ -182,6 +194,7 @@ const ALIASES: Partial<Record<ImportField, [string[], Transform]>> = {
   pool: [["poolprivateyn", "pool"], "yesNo"],
   heatingCooling: [["heatingtype", "heating"], "text"],
   view: [["view", "views"], "text"],
+  remarks: [["remarkspublic", "publicremarks", "remarks", "propertydescription"], "text"],
 };
 
 export function guessMapping(headers: string[]): ColumnMapping {

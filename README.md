@@ -12,6 +12,7 @@ The worksheet is laid out as four steps (Subject, Comparables, Adjustments, Comm
 - **Comparable sales** with the same fields plus sale price and date, list price, days on market, UAD sale type, financing, concessions and data source.
 - **MLS CSV import**: upload a CSV export of an MLS search, tick the sales to use, and they become comps. Claude matches the CSV columns to the comp fields once per export layout (the mapping is remembered and editable); without an API key, common MLS/RESO column names are matched by name.
 - **Sales comparison grid** that calculates line adjustments, net and gross adjustment %, and the adjusted price for each comp, flagging comps above the traditional 15% net / 25% gross guidelines.
+- **Condition and quality suggestions**: listing remarks come in with the MLS import (HTML entities decoded), and Claude suggests a UAD C1-C6 / Q1-Q6 rating for each comp with its confidence and the remarks that drove it. Ratings only change when the appraiser applies them.
 - **Comment drafting**: add your notes (neighborhood boundaries, market trend, inspection observations), and Claude drafts the neighborhood, market conditions, improvements, sales comparison and reconciliation comments from the worksheet. Anything it wasn't told shows up as a [bracketed placeholder]; each section is editable and has a copy button.
 - **Adjustment rates** are editable per market (defaults are placeholders).
 - The draft is saved in the browser and can be exported as JSON.
@@ -34,6 +35,7 @@ Open http://localhost:3000.
 - `src/app/api/map-columns/route.ts` asks Claude to map a CSV's columns to comp fields.
 - `src/app/api/comments/route.ts` drafts the narrative comments.
 - `src/lib/phillyRecords.ts` builds the query against Philadelphia's OPA dataset (`opa_properties_public` on phl.carto.com) and maps a record to subject fields; `src/app/api/public-record/route.ts` runs it.
+- `src/app/api/suggest-ratings/route.ts` suggests UAD condition and quality ratings from listing remarks.
 - `src/app/api/extract/route.ts` calls the Claude API with structured outputs to turn pasted text into fields.
 - `src/components/Worksheet.tsx` holds the step layout; `fields.tsx` the grouped property fields; `ImportComps.tsx` and `CommentsPanel.tsx` the import and comments steps.
 
