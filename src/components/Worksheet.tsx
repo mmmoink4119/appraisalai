@@ -14,38 +14,97 @@ import {
   emptyComp,
   emptyProperty,
 } from "@/lib/appraisal";
+import type { ExtractedField } from "@/lib/extraction";
+import {
+  APPRAISER_GROUPS,
+  ASSIGNMENT_GROUPS,
+  CONTRACT_GROUPS,
+  COST_GROUPS,
+  IMPROVEMENT_GROUPS,
+  INCOME_GROUPS,
+  NEIGHBORHOOD_GROUPS,
+  RECONCILIATION_GROUPS,
+  SALES_GROUPS,
+  SITE_GROUPS,
+  UAD_ASSIGNMENT_GROUPS,
+  UAD_IMPROVEMENT_GROUPS,
+  UAD_MARKET_GROUPS,
+  UAD_RENTAL_GROUPS,
+  UAD_REPORT_GROUPS,
+  UAD_SITE_GROUPS,
+  REPORT_FORMS,
+  type Defect,
+  type ReportData,
+  type ReportValue,
+  isCarriedOver,
+  isUad36,
+  progress,
+} from "@/lib/report";
+import { costApproach, incomeApproach } from "@/lib/valuation";
 import CommentsPanel from "./CommentsPanel";
+import Defects from "./Defects";
+import DocumentIntake from "./DocumentIntake";
 import ImportComps from "./ImportComps";
+import MarketConditions from "./MarketConditions";
+import ReportFields from "./ReportFields";
+import ReportView, { missingItems } from "./ReportView";
+import ReportViewUad36 from "./ReportViewUad36";
 import RatingSuggestions from "./RatingSuggestions";
-import { FieldGroups, PROPERTY_GROUPS, RATE_LABELS, REMARKS_GROUP, SALE_GROUP, filledCount, money, pct } from "./fields";
+import RecordLookup from "./RecordLookup";
+import TotalExport from "./TotalExport";
+import { FieldGroups, PROPERTY_GROUPS, RATE_LABELS, RECORD_GROUP, REMARKS_GROUP, SALE_GROUP, filledCount, money, pct } from "./fields";
 
-type Draft = { subject: Property; comps: Comp[]; rates: AdjustmentRates; notes: string; comments: Comments };
+type Draft = {
+  subject: Property;
+  comps: Comp[];
+  rates: AdjustmentRates;
+  notes: string;
+  comments: Comments;
+  report: ReportData;
+  defects: Defect[];
+};
 
 const STORAGE_KEY = "appraisalai-draft";
 const STEP_KEY = "appraisalai-step";
 
 const STEPS = [
-  { id: "subject", label: "Subject" },
+  { id: "assignment", label: "Assignment" },
+  { id: "subject", label: "Subject & site" },
+  { id: "improvements", label: "Improvements" },
+  { id: "neighborhood", label: "Neighborhood" },
   { id: "comps", label: "Comparables" },
-  { id: "grid", label: "Adjustments" },
+  { id: "grid", label: "Sales comparison" },
   { id: "comments", label: "Comments" },
+  { id: "value", label: "Value" },
+  { id: "report", label: "Report" },
 ] as const;
 type StepId = (typeof STEPS)[number]["id"];
 
-function initialDraft(): Draft {
+function initialDraft(report: ReportData = {}): Draft {
   return {
     subject: emptyProperty(),
     comps: [emptyComp(), emptyComp(), emptyComp()],
     rates: defaultRates,
     notes: "",
     comments: emptyComments(),
+    report,
+    defects: [],
   };
 }
 
 function loadDraft(): Draft {
   try {
     const saved = localStorage.getItem(STORAGE_KEY);
-    if (saved) return { ...initialDraft(), ...JSON.parse(saved) };
+    if (saved) {
+      const draft = JSON.parse(saved);
+      // Drafts saved before a field existed are missing it; fill with blanks.
+      return {
+        ...initialDraft(),
+        ...draft,
+        subject: { ...emptyProperty(), ...draft.subject },
+        comps: (draft.comps ?? []).map((c: Comp) => ({ ...emptyComp(), ...c })),
+      };
+    }
   } catch {}
   return initialDraft();
 }
@@ -55,7 +114,7 @@ function loadStep(): StepId {
     const saved = localStorage.getItem(STEP_KEY);
     if (STEPS.some((s) => s.id === saved)) return saved as StepId;
   } catch {}
-  return "subject";
+  return "assignment";
 }
 
 // Rendered client-only (see page.tsx), so the browser-saved draft can be
@@ -89,18 +148,29 @@ export default function Worksheet() {
 
   const usedComps = draft.comps.filter((c) => c.salePrice != null).length;
   const subjectProgress = filledCount(draft.subject, PROPERTY_GROUPS);
+  const siteProgress = progress(draft.report, isUad36(draft.report) ? [...SITE_GROUPS, ...UAD_SITE_GROUPS] : SITE_GROUPS);
   const draftedComments = Object.values(draft.comments).filter((c) => c.trim()).length;
+  const fields = ({ filled, total }: { filled: number; total: number }) => `${filled}/${total} fields`;
+  const missing = missingItems(draft).length;
+  const uad = isUad36(draft.report);
+  const extra = (groups: typeof SITE_GROUPS) => (uad ? groups : []);
+  const finalValue = draft.report["reconciliation.finalValue"];
   const hints: Record<StepId, string> = {
-    subject: `${subjectProgress.filled}/${subjectProgress.total} fields`,
+    assignment: fields(progress(draft.report, [...ASSIGNMENT_GROUPS, ...CONTRACT_GROUPS, ...extra(UAD_ASSIGNMENT_GROUPS)])),
+    subject: fields({ filled: subjectProgress.filled + siteProgress.filled, total: subjectProgress.total + siteProgress.total }),
+    improvements: fields(progress(draft.report, [...IMPROVEMENT_GROUPS, ...extra(UAD_IMPROVEMENT_GROUPS)])),
+    neighborhood: fields(progress(draft.report, [...NEIGHBORHOOD_GROUPS, ...extra(UAD_MARKET_GROUPS)])),
     comps: `${usedComps} with a sale price`,
     grid: usedComps ? `${usedComps} adjusted` : "needs comps",
     comments: `${draftedComments}/5 drafted`,
+    value: typeof finalValue === "number" ? money(finalValue) : "not set",
+    report: missing ? `${missing} to fill` : "ready to review",
   };
   const index = STEPS.findIndex((s) => s.id === step);
 
   return (
     <div className="min-h-full">
-      <header className="sticky top-0 z-10 border-b border-line bg-surface/90 backdrop-blur">
+      <header className="sticky top-0 z-10 border-b border-line bg-surface/90 backdrop-blur print:hidden">
         <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-3 px-4 py-3">
           <div className="flex min-w-0 items-center gap-3">
             <div className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-accent text-sm font-bold text-accent-contrast">
@@ -109,26 +179,34 @@ export default function Worksheet() {
             <div className="min-w-0">
               <div className="text-sm font-semibold leading-tight">Appraisal AI</div>
               <div className="truncate text-xs text-muted">
-                {draft.subject.address ?? "New report"} · URAR / UAD 3.6
+                {draft.subject.address ?? "New report"} · {uad ? "UAD 3.6 URAR" : "URAR Form 1004"}
               </div>
             </div>
           </div>
           <div className="flex gap-2">
             <button className="btn" onClick={exportJson}>Export</button>
-            <button className="btn" onClick={() => confirm("Clear the whole report?") && setDraft(initialDraft())}>
+            <button
+              className="btn"
+              onClick={() =>
+                confirm("Clear the whole report? Your appraiser details are kept.") &&
+                setDraft((d) => initialDraft(Object.fromEntries(Object.entries(d.report).filter(([k]) => isCarriedOver(k)))))
+              }
+            >
               New report
             </button>
           </div>
         </div>
-        <nav className="mx-auto max-w-6xl overflow-x-auto px-4">
+        <nav className="mx-auto max-w-7xl overflow-x-auto px-4">
           <ol className="flex min-w-max gap-1">
             {STEPS.map((s, i) => {
               const active = s.id === step;
               return (
                 <li key={s.id}>
                   <button
+                    // Keep the current step visible when the stepper scrolls on small screens.
+                    ref={active ? (el) => el?.scrollIntoView({ block: "nearest", inline: "nearest" }) : undefined}
                     onClick={() => goTo(s.id)}
-                    className={`flex items-center gap-2 border-b-2 px-3 py-2.5 text-left transition ${
+                    className={`flex items-center gap-2 border-b-2 px-2.5 py-2.5 text-left transition ${
                       active ? "border-accent" : "border-transparent hover:border-line"
                     }`}
                   >
@@ -151,8 +229,57 @@ export default function Worksheet() {
         </nav>
       </header>
 
-      <main className="mx-auto w-full max-w-6xl space-y-5 px-4 py-6">
+      <main className="mx-auto w-full max-w-6xl space-y-5 px-4 py-6 print:max-w-none print:p-0">
+        {step === "assignment" && <AssignmentStep draft={draft} setDraft={setDraft} />}
         {step === "subject" && <SubjectStep draft={draft} setDraft={setDraft} />}
+        {step === "improvements" && (
+          <>
+            <ReportSection
+              draft={draft}
+              setDraft={setDraft}
+              title="Improvements"
+              detail="Fill from your inspection notes on the Assignment step, or enter them here. Design, year built, rooms, GLA, basement, garage and ratings are on the Subject step."
+              groups={IMPROVEMENT_GROUPS}
+            />
+            {uad && (
+              <>
+                <ReportSection
+                  draft={draft}
+                  setDraft={setDraft}
+                  title="UAD 3.6 improvements"
+                  detail="The redesigned URAR's dwelling, unit, outbuilding, vehicle storage and quality and condition items."
+                  groups={UAD_IMPROVEMENT_GROUPS}
+                />
+                <Defects defects={draft.defects} onChange={(defects) => setDraft((d) => ({ ...d, defects }))} />
+              </>
+            )}
+          </>
+        )}
+        {step === "neighborhood" && (
+          <>
+            <ReportSection
+              draft={draft}
+              setDraft={setDraft}
+              title="Neighborhood"
+              detail="The neighborhood description and market conditions comments are drafted on the Comments step."
+              groups={NEIGHBORHOOD_GROUPS}
+            />
+            <MarketConditions
+              report={draft.report}
+              onChange={setReportField(setDraft)}
+              onFill={(fields) => setDraft((d) => ({ ...d, report: { ...d.report, ...fields } }))}
+            />
+            {uad && (
+              <ReportSection
+                draft={draft}
+                setDraft={setDraft}
+                title="UAD 3.6 market"
+                detail="The Market section reuses the boundaries above as the market area and the figures from the MLS export for its charts."
+                groups={UAD_MARKET_GROUPS}
+              />
+            )}
+          </>
+        )}
         {step === "comps" && <CompsStep draft={draft} setDraft={setDraft} />}
         {step === "grid" && <GridStep draft={draft} setDraft={setDraft} />}
         {step === "comments" && (
@@ -165,6 +292,7 @@ export default function Worksheet() {
               subject={draft.subject}
               comps={draft.comps}
               rates={draft.rates}
+              report={draft.report}
               notes={draft.notes}
               comments={draft.comments}
               onNotes={(notes) => setDraft((d) => ({ ...d, notes }))}
@@ -173,7 +301,10 @@ export default function Worksheet() {
           </section>
         )}
 
-        <div className="flex justify-between">
+        {step === "value" && <ValueStep draft={draft} setDraft={setDraft} />}
+        {step === "report" && <ReportStep draft={draft} setDraft={setDraft} goTo={goTo} />}
+
+        <div className="flex justify-between print:hidden">
           {index > 0 ? (
             <button className="btn" onClick={() => goTo(STEPS[index - 1].id)}>← {STEPS[index - 1].label}</button>
           ) : (
@@ -204,14 +335,203 @@ function StepHeading({ title, detail, action }: { title: string; detail?: string
   );
 }
 
+const setReportField = (setDraft: StepProps["setDraft"]) => (key: string, value: ReportValue) =>
+  setDraft((d) => ({ ...d, report: { ...d.report, [key]: value } }));
+
+function ReportSection({
+  draft,
+  setDraft,
+  title,
+  detail,
+  groups,
+}: StepProps & { title: string; detail?: string; groups: typeof SITE_GROUPS }) {
+  return (
+    <section className="card">
+      <StepHeading title={title} detail={detail} />
+      <ReportFields groups={groups} data={draft.report} onChange={setReportField(setDraft)} />
+    </section>
+  );
+}
+
+function AssignmentStep({ draft, setDraft }: StepProps) {
+  // Extracted subject.* keys go to the property; the rest to report sections.
+  const apply = (fields: ExtractedField[]) =>
+    setDraft((d) => {
+      const subject = { ...d.subject } as Record<string, unknown>;
+      const report = { ...d.report };
+      for (const f of fields) {
+        if (f.key.startsWith("subject.")) subject[f.key.slice(8)] = f.value;
+        else report[f.key] = f.value;
+      }
+      return { ...d, subject: subject as Property, report };
+    });
+  return (
+    <>
+      <DocumentIntake subject={draft.subject} report={draft.report} onApply={apply} />
+      <ReportSection
+        draft={draft}
+        setDraft={setDraft}
+        title="Assignment and contract"
+        detail="Who the report is for, the effective date, and the sale being financed."
+        groups={[...ASSIGNMENT_GROUPS, ...CONTRACT_GROUPS, ...(isUad36(draft.report) ? UAD_ASSIGNMENT_GROUPS : [])]}
+      />
+    </>
+  );
+}
+
 function SubjectStep({ draft, setDraft }: StepProps) {
   const setSubject = (subject: Property) => setDraft((d) => ({ ...d, subject }));
   return (
-    <section className="card">
-      <StepHeading title="Subject property" detail="The property being appraised." />
-      <PasteToFill kind="subject" onFill={(f) => setSubject({ ...draft.subject, ...nonNull(f) })} />
-      <FieldGroups groups={PROPERTY_GROUPS} value={draft.subject} onChange={setSubject} />
-    </section>
+    <>
+      <section className="card">
+        <StepHeading title="Subject property" detail="The property being appraised." />
+        <RecordLookup subject={draft.subject} onFill={(f) => setSubject({ ...draft.subject, ...nonNull(f) })} />
+        <PasteToFill kind="subject" onFill={(f) => setSubject({ ...draft.subject, ...nonNull(f) })} />
+        <FieldGroups groups={[...PROPERTY_GROUPS, RECORD_GROUP]} value={draft.subject} onChange={setSubject} />
+      </section>
+      <ReportSection
+        draft={draft}
+        setDraft={setDraft}
+        title="Site"
+        groups={isUad36(draft.report) ? [...SITE_GROUPS, ...UAD_SITE_GROUPS] : SITE_GROUPS}
+      />
+    </>
+  );
+}
+
+function ValueStep({ draft, setDraft }: StepProps) {
+  const cost = costApproach(draft.report, draft.subject);
+  const income = incomeApproach(draft.report);
+  const sales = draft.report["sales.indicatedValue"];
+  return (
+    <>
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+        <Stat label="Sales comparison" value={typeof sales === "number" ? money(sales) : "—"} />
+        <Stat label="Cost approach" value={draft.report["cost.developed"] ? money(cost.indicated) : "Not developed"} />
+        <Stat label="Income approach" value={draft.report["income.developed"] ? money(income.indicated) : "Not developed"} />
+      </div>
+      <ReportSection
+        draft={draft}
+        setDraft={setDraft}
+        title="Reconciliation"
+        detail="Your final opinion of value. The reconciliation comment is drafted on the Comments step."
+        groups={RECONCILIATION_GROUPS}
+      />
+      <section className="card">
+        <StepHeading
+          title="Cost approach"
+          detail="Optional for most existing homes. Totals use the subject's GLA from the Subject step."
+        />
+        <ReportFields groups={COST_GROUPS} data={draft.report} onChange={setReportField(setDraft)} />
+        <dl className="mt-5 grid grid-cols-2 gap-3 border-t border-line pt-4 text-sm sm:grid-cols-4">
+          <Total label="Cost new" value={cost.costNew} />
+          <Total label="Less depreciation" value={cost.depreciation || null} />
+          <Total label="Depreciated cost" value={cost.depreciated} />
+          <Total label="Indicated value" value={cost.indicated} strong />
+        </dl>
+      </section>
+      <section className="card">
+        <StepHeading title="Income approach" detail="Usually only for rental-heavy markets or when the client asks." />
+        <ReportFields groups={INCOME_GROUPS} data={draft.report} onChange={setReportField(setDraft)} />
+        <dl className="mt-5 grid grid-cols-2 gap-3 border-t border-line pt-4 text-sm sm:grid-cols-4">
+          <Total label="Indicated value" value={income.indicated} strong />
+        </dl>
+      </section>
+      {isUad36(draft.report) && (
+        <ReportSection
+          draft={draft}
+          setDraft={setDraft}
+          title="Rental information"
+          detail="UAD 3.6 shows this section when the subject is rented or the rent matters to the assignment."
+          groups={UAD_RENTAL_GROUPS}
+        />
+      )}
+    </>
+  );
+}
+
+function Total({ label, value, strong }: { label: string; value: number | null; strong?: boolean }) {
+  return (
+    <div>
+      <dt className="text-xs text-muted">{label}</dt>
+      <dd className={`tabular-nums ${strong ? "font-semibold" : ""}`}>{money(value)}</dd>
+    </div>
+  );
+}
+
+const STEP_LABEL = Object.fromEntries(STEPS.map((s) => [s.id, s.label])) as Record<StepId, string>;
+
+function ReportStep({ draft, setDraft, goTo }: StepProps & { goTo: (id: StepId) => void }) {
+  const missing = missingItems(draft);
+  const uad = isUad36(draft.report);
+  const byStep = STEPS.map((s) => ({ step: s.id, items: missing.filter((m) => m.step === s.id) })).filter((g) => g.items.length);
+  return (
+    <>
+      <section className="card print:hidden">
+        <StepHeading
+          title="Report"
+          detail={`The filled-out report in ${uad ? "redesigned URAR (UAD 3.6) section" : "Form 1004"} order. Print it or save it as a PDF to review, then enter the final version in TOTAL.`}
+          action={
+            <button className="btn btn-primary" onClick={() => window.print()}>
+              Print / save PDF
+            </button>
+          }
+        />
+        <div className="mb-4 flex flex-wrap items-center gap-2 text-sm">
+          <span className="text-muted">Form</span>
+          <div className="inline-flex rounded-lg border border-line p-0.5" role="group" aria-label="Report form">
+            {REPORT_FORMS.map((form) => {
+              const active = (form === REPORT_FORMS[1]) === uad;
+              return (
+                <button
+                  key={form}
+                  aria-pressed={active}
+                  className={`rounded-md px-3 py-1 ${active ? "bg-accent text-accent-contrast" : "text-muted hover:text-foreground"}`}
+                  onClick={() => setReportField(setDraft)("assignment.form", form)}
+                >
+                  {form}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+        {missing.length === 0 ? (
+          <p className="text-sm text-accent">Every required item has a value. Review the report below before signing.</p>
+        ) : (
+          <div className="space-y-2">
+            <p className="text-sm font-medium">{missing.length} items still to fill</p>
+            <div className="space-y-1.5">
+              {byStep.map(({ step, items }) => (
+                <div key={step} className="flex flex-wrap items-baseline gap-x-2 gap-y-1 text-sm">
+                  <button className="font-medium text-accent hover:underline" onClick={() => goTo(step as StepId)}>
+                    {STEP_LABEL[step as StepId]}
+                  </button>
+                  <span className="text-muted">{items.map((i) => i.label).join(", ")}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+      </section>
+      <TotalExport subject={draft.subject} report={draft.report} />
+      <details className="card print:hidden">
+        <summary className="cursor-pointer text-sm font-medium">Appraiser details (kept for your next report)</summary>
+        <div className="mt-4">
+          <ReportFields groups={APPRAISER_GROUPS} data={draft.report} onChange={setReportField(setDraft)} />
+        </div>
+      </details>
+      {uad && (
+        <details className="card print:hidden">
+          <summary className="cursor-pointer text-sm font-medium">Revision history and supplemental information</summary>
+          <div className="mt-4">
+            <ReportFields groups={UAD_REPORT_GROUPS} data={draft.report} onChange={setReportField(setDraft)} />
+          </div>
+        </details>
+      )}
+      <div className="card print:border-0 print:p-0 print:shadow-none">
+        {uad ? <ReportViewUad36 {...draft} /> : <ReportView {...draft} />}
+      </div>
+    </>
   );
 }
 
@@ -401,6 +721,18 @@ function GridStep({ draft, setDraft }: StepProps) {
 
       <section className="card">
         <StepHeading
+          title="Sales comparison approach"
+          detail={
+            adjusted.length
+              ? `Adjusted prices range from ${money(Math.min(...adjusted))} to ${money(Math.max(...adjusted))}. Enter your indicated value below.`
+              : "Market listing and sale counts, prior sale research and your indicated value."
+          }
+        />
+        <ReportFields groups={SALES_GROUPS} data={draft.report} onChange={setReportField(setDraft)} />
+      </section>
+
+      <section className="card">
+        <StepHeading
           title="Adjustment rates"
           detail="Placeholder values. Set these from paired sales or market data for the subject's market."
         />
@@ -472,7 +804,7 @@ function PasteToFill({ kind, onFill }: { kind: "subject" | "comp"; onFill: (fiel
   return (
     <details className="group mb-6 rounded-lg border border-dashed border-line bg-accent-soft/40 px-4 py-3">
       <summary className="cursor-pointer text-sm font-medium text-accent">
-        ✦ Fill from a listing or public record
+        ✦ Paste text to fill (listing sheet, tax record, notes)
       </summary>
       <div className="mt-3 space-y-2">
         <textarea

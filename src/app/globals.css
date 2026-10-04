@@ -68,3 +68,27 @@ body {
     @apply text-base font-semibold;
   }
 }
+
+/* The printed report is always black on white, whatever the screen theme. */
+@media print {
+  :root {
+    --background: #ffffff;
+    --foreground: #000000;
+    --surface: #ffffff;
+    --line: #cccccc;
+    --muted: #444444;
+  }
+  @page {
+    size: letter;
+    margin: 0.5in;
+  }
+  body {
+    print-color-adjust: exact;
+  }
+  .report {
+    max-width: none;
+    font-size: 10px;
+    /* Keeps the section borders inside the printable area. */
+    padding: 0 2px;
+  }
+}
