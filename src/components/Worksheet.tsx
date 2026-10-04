@@ -47,6 +47,7 @@ const PROPERTY_FIELDS: FieldDef[] = [
 ];
 
 const SALE_FIELDS: FieldDef[] = [
+  { key: "status", label: "MLS status", type: "text" },
   { key: "salePrice", label: "Sale price", type: "number" },
   { key: "saleDate", label: "Sale date", type: "text" },
   { key: "listPrice", label: "List price", type: "number" },

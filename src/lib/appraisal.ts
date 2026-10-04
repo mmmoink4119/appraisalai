@@ -35,6 +35,7 @@ export const SALE_TYPES = [
 ] as const;
 
 export const CompSchema = PropertySchema.extend({
+  status: z.string().nullable().describe("MLS status, e.g. Closed, Pending, Active"),
   salePrice: z.number().nullable(),
   saleDate: z.string().nullable().describe("Closing date, YYYY-MM-DD"),
   listPrice: z.number().nullable(),
@@ -59,7 +60,7 @@ export function emptyProperty(): Property {
 
 export function emptyComp(): Comp {
   return {
-    ...emptyProperty(), salePrice: null, saleDate: null, listPrice: null, daysOnMarket: null,
+    ...emptyProperty(), status: null, salePrice: null, saleDate: null, listPrice: null, daysOnMarket: null,
     saleType: null, financing: null, concessions: null, dataSource: null,
   };
 }

@@ -44,7 +44,7 @@ export function parseCsv(text: string): string[][] {
 
 // Comp fields a CSV column can be mapped to, and how to read the cell.
 export const IMPORT_FIELDS = [
-  "salePrice", "saleDate", "listPrice", "daysOnMarket", "saleType", "financing", "concessions", "dataSource",
+  "status", "salePrice", "saleDate", "listPrice", "daysOnMarket", "saleType", "financing", "concessions", "dataSource",
   "address", "city", "state", "zip", "county", "parcelNumber", "yearBuilt", "gla", "lotSizeSqFt",
   "bedrooms", "fullBaths", "halfBaths", "basementSqFt", "basementFinishedSqFt", "garageSpaces",
   "design", "condition", "quality", "fireplaces", "pool", "heatingCooling", "view",
@@ -58,7 +58,7 @@ export const TRANSFORMS = [
   "acresToSqFt", // lot size given in acres
   "bathsDecimalFull", // "2.1" style total baths: full part
   "bathsDecimalHalf", // "2.1" style total baths: half part
-  "yesNo", // Y/N, Yes/No, True/False, or any non-empty value means yes
+  "yesNo", // Y/N, Yes/No, True/False, "No Pool"; any other non-empty value means yes
   "saleType", // MLS sale type wording to a UAD sale type
 ] as const;
 export type Transform = (typeof TRANSFORMS)[number];
@@ -127,7 +127,7 @@ export function applyTransform(cell: string, transform: Transform): string | num
       return frac ? Number(frac[1]) : 0;
     }
     case "yesNo":
-      return !/^(n|no|none|false|0)$/i.test(s);
+      return !/^(n|no|none|false|0)\b/i.test(s);
     case "saleType":
       return toSaleType(s);
   }
@@ -153,33 +153,35 @@ export function headerSignature(headers: string[]): string {
 // Header aliases for common MLS / RESO export names. Used when the AI step
 // is unavailable; the appraiser can still fix any column in the UI.
 const ALIASES: Partial<Record<ImportField, [string[], Transform]>> = {
+  status: [["standardstatus", "status", "mlsstatus", "listingstatus"], "text"],
   salePrice: [["closeprice", "soldprice", "saleprice", "closedprice", "sp"], "number"],
   saleDate: [["closedate", "solddate", "saledate", "closingdate", "coe"], "date"],
   listPrice: [["listprice", "lp", "originallistprice"], "number"],
   daysOnMarket: [["daysonmarket", "dom", "cdom", "cumulativedaysonmarket"], "number"],
   saleType: [["speciallistingconditions", "saletype", "salecondition", "saletypes"], "saleType"],
   financing: [["buyerfinancing", "financing", "financingtype", "terms"], "text"],
-  concessions: [["concessionsamount", "sellerconcessions", "concessions", "sellercontribution"], "number"],
+  concessions: [["concessionsamount", "concessionsfinal", "sellerconcessions", "concessions", "sellercontribution"], "number"],
   dataSource: [["listingid", "mlsnumber", "mls", "mlsid", "listingnumber", "ml"], "text"],
-  address: [["unparsedaddress", "address", "streetaddress", "fulladdress"], "text"],
+  address: [["unparsedaddress", "fullstreetaddress", "address", "streetaddress", "fulladdress"], "text"],
   city: [["city"], "text"],
   state: [["stateorprovince", "state", "st"], "text"],
   zip: [["postalcode", "zip", "zipcode"], "text"],
   county: [["countyorparish", "county"], "text"],
   parcelNumber: [["parcelnumber", "apn", "taxid", "pin"], "text"],
   yearBuilt: [["yearbuilt", "yrbuilt", "yearblt"], "number"],
-  gla: [["livingarea", "gla", "sqftabovegrade", "abovegradefinishedarea", "sqft", "squarefeet"], "number"],
-  lotSizeSqFt: [["lotsizesquarefeet", "lotsqft", "lotsize"], "number"],
+  gla: [["livingarea", "gla", "sqftabovegrade", "abovegradefinishedarea", "abovegradefinishedsqft", "sqft", "squarefeet"], "number"],
+  lotSizeSqFt: [["lotsizesquarefeet", "lotsizesqft", "lotsqft", "lotsize"], "number"],
   bedrooms: [["bedroomstotal", "bedrooms", "beds", "br"], "number"],
   fullBaths: [["bathroomsfull", "fullbaths", "bathsfull"], "number"],
   halfBaths: [["bathroomshalf", "halfbaths", "bathshalf"], "number"],
   basementSqFt: [["belowgradetotalarea", "basementsqft", "basementarea"], "number"],
-  basementFinishedSqFt: [["belowgradefinishedarea", "basementfinishedsqft", "finishedbasement"], "number"],
-  garageSpaces: [["garagespaces", "garage", "garagestalls"], "number"],
+  basementFinishedSqFt: [["belowgradefinishedarea", "belowgradefinishedsqft", "basementfinishedsqft", "finishedbasement"], "number"],
+  garageSpaces: [["totalgaragespaces", "garagespaces", "garagestalls"], "number"],
   design: [["architecturalstyle", "style", "design"], "text"],
   fireplaces: [["fireplacestotal", "fireplaces"], "number"],
   pool: [["poolprivateyn", "pool"], "yesNo"],
-  view: [["view"], "text"],
+  heatingCooling: [["heatingtype", "heating"], "text"],
+  view: [["view", "views"], "text"],
 };
 
 export function guessMapping(headers: string[]): ColumnMapping {

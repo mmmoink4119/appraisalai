@@ -11,7 +11,7 @@ Pick a transform for each mapped column:
 - bathsDecimalFull / bathsDecimalHalf: a single "total baths" column written like 2.1 (2 full, 1 half). Prefer separate full and half bath columns when they exist.
 - yesNo: yes/no style columns such as pool. saleType: MLS sale or listing type wording (REO, short sale, etc.).
 Field notes: gla is above-grade finished living area. salePrice is the closed/sold price, not the list price. saleDate is the closing date.
-dataSource should map to the MLS listing number column. Leave condition and quality null unless a column holds UAD C1-C6 / Q1-Q6 ratings.`;
+status is the MLS listing status (closed, active, pending). dataSource should map to the MLS listing number column. Leave condition and quality null unless a column holds UAD C1-C6 / Q1-Q6 ratings.`;
 
 export async function POST(request: Request) {
   const { headers, sampleRows } = (await request.json()) as { headers?: string[]; sampleRows?: string[][] };

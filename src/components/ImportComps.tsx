@@ -132,13 +132,15 @@ export default function ImportComps({ onAdd }: { onAdd: (comps: Comp[]) => void 
       {mapping && (
         <>
           <p className="text-sm">
-            {fileName}: {rows.length} listings. Tick the sales to use as comps.
+            {fileName}: {rows.length} listings. Tick the ones to use as comps; rows without a sale price are
+            active or pending listings.
           </p>
           <div className="max-h-80 overflow-auto">
             <table className="w-full min-w-[720px] text-sm">
               <thead className="sticky top-0 bg-background">
                 <tr className="border-b border-current/20 text-left">
                   <th className="py-1 pr-2"></th>
+                  <th className="py-1 pr-3">Status</th>
                   <th className="py-1 pr-3">Address</th>
                   <th className="py-1 pr-3 text-right">Sale price</th>
                   <th className="py-1 pr-3">Sale date</th>
@@ -159,6 +161,7 @@ export default function ImportComps({ onAdd }: { onAdd: (comps: Comp[]) => void 
                     <td className="py-1 pr-2">
                       <input type="checkbox" checked={selected.has(i)} readOnly />
                     </td>
+                    <td className="py-1 pr-3">{c.status ?? "—"}</td>
                     <td className="py-1 pr-3">{c.address ?? "—"}</td>
                     <td className="py-1 pr-3 text-right">{money(c.salePrice)}</td>
                     <td className="py-1 pr-3">{c.saleDate ?? "—"}</td>
@@ -207,7 +210,15 @@ export default function ImportComps({ onAdd }: { onAdd: (comps: Comp[]) => void 
             </div>
           </details>
 
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2">
+            <button
+              className="btn"
+              onClick={() =>
+                setSelected(new Set(comps.flatMap((c, i) => (c.salePrice != null && c.saleDate ? [i] : []))))
+              }
+            >
+              Select all closed sales
+            </button>
             <button className="btn" disabled={selected.size === 0} onClick={add}>
               Add {selected.size || ""} as comps
             </button>
