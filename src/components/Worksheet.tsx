@@ -51,6 +51,7 @@ import ReportView, { missingItems } from "./ReportView";
 import ReportViewUad36 from "./ReportViewUad36";
 import RatingSuggestions from "./RatingSuggestions";
 import RecordLookup from "./RecordLookup";
+import TotalExport from "./TotalExport";
 import { FieldGroups, PROPERTY_GROUPS, RATE_LABELS, RECORD_GROUP, REMARKS_GROUP, SALE_GROUP, filledCount, money, pct } from "./fields";
 
 type Draft = {
@@ -512,6 +513,7 @@ function ReportStep({ draft, setDraft, goTo }: StepProps & { goTo: (id: StepId) 
           </div>
         )}
       </section>
+      <TotalExport subject={draft.subject} report={draft.report} />
       <details className="card print:hidden">
         <summary className="cursor-pointer text-sm font-medium">Appraiser details (kept for your next report)</summary>
         <div className="mt-4">
