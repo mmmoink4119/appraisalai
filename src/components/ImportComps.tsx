@@ -112,22 +112,25 @@ export default function ImportComps({ onAdd }: { onAdd: (comps: Comp[]) => void 
   };
 
   return (
-    <div className="space-y-3 rounded-lg border border-current/15 p-4">
+    <section className="card space-y-3">
       <div className="flex flex-wrap items-center gap-3">
-        <span className="font-medium">Import from MLS CSV</span>
+        <div className="mr-auto">
+          <h2 className="text-lg font-semibold">Import from MLS</h2>
+          <p className="text-sm text-muted">Upload the CSV export of an MLS search and pick the sales to use.</p>
+        </div>
         <input
           type="file"
           accept=".csv,text/csv"
-          className="text-sm"
+          className="text-sm file:mr-3 file:rounded-md file:border-0 file:bg-accent file:px-3 file:py-1.5 file:text-sm file:font-medium file:text-accent-contrast"
           onChange={(e) => {
             const file = e.target.files?.[0];
             if (file) onFile(file);
             e.target.value = "";
           }}
         />
-        {busy && <span className="text-sm opacity-70">Matching columns…</span>}
+        {busy && <span className="text-sm text-muted">Matching columns…</span>}
       </div>
-      {notice && <p className="text-sm opacity-80">{notice}</p>}
+      {notice && <p className="rounded-md bg-accent-soft px-3 py-2 text-sm">{notice}</p>}
 
       {mapping && (
         <>
@@ -135,11 +138,11 @@ export default function ImportComps({ onAdd }: { onAdd: (comps: Comp[]) => void 
             {fileName}: {rows.length} listings. Tick the ones to use as comps; rows without a sale price are
             active or pending listings.
           </p>
-          <div className="max-h-80 overflow-auto">
+          <div className="max-h-80 overflow-auto rounded-lg border border-line">
             <table className="w-full min-w-[720px] text-sm">
-              <thead className="sticky top-0 bg-background">
-                <tr className="border-b border-current/20 text-left">
-                  <th className="py-1 pr-2"></th>
+              <thead className="sticky top-0 bg-surface">
+                <tr className="border-b border-line text-left text-xs text-muted">
+                  <th className="py-2 pl-3 pr-2"></th>
                   <th className="py-1 pr-3">Status</th>
                   <th className="py-1 pr-3">Address</th>
                   <th className="py-1 pr-3 text-right">Sale price</th>
@@ -155,10 +158,10 @@ export default function ImportComps({ onAdd }: { onAdd: (comps: Comp[]) => void 
                 {comps.map((c, i) => (
                   <tr
                     key={i}
-                    className="cursor-pointer border-b border-current/10 hover:bg-current/5"
+                    className={`cursor-pointer border-b border-line/60 ${selected.has(i) ? "bg-accent-soft" : "hover:bg-foreground/[0.03]"}`}
                     onClick={() => toggle(i)}
                   >
-                    <td className="py-1 pr-2">
+                    <td className="py-1.5 pl-3 pr-2">
                       <input type="checkbox" checked={selected.has(i)} readOnly />
                     </td>
                     <td className="py-1 pr-3">{c.status ?? "—"}</td>
@@ -185,7 +188,7 @@ export default function ImportComps({ onAdd }: { onAdd: (comps: Comp[]) => void 
             <div className="mt-3 grid gap-2 sm:grid-cols-2">
               {mapping.map((m, i) => (
                 <div key={m.field} className="flex items-center gap-2 text-sm">
-                  <span className="w-36 shrink-0 opacity-70">{m.field}</span>
+                  <span className="w-36 shrink-0 text-muted">{m.field}</span>
                   <select
                     className="input"
                     value={m.column ?? ""}
@@ -219,13 +222,13 @@ export default function ImportComps({ onAdd }: { onAdd: (comps: Comp[]) => void 
             >
               Select all closed sales
             </button>
-            <button className="btn" disabled={selected.size === 0} onClick={add}>
+            <button className="btn btn-primary" disabled={selected.size === 0} onClick={add}>
               Add {selected.size || ""} as comps
             </button>
             <button className="btn" onClick={reset}>Cancel</button>
           </div>
         </>
       )}
-    </div>
+    </section>
   );
 }
