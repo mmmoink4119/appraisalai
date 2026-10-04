@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import {
   type AdjustmentRates,
+  type Comments,
   type Comp,
   type Property,
   GROSS_ADJ_WARN,
@@ -10,12 +11,14 @@ import {
   SALE_TYPES,
   adjustComp,
   defaultRates,
+  emptyComments,
   emptyComp,
   emptyProperty,
 } from "@/lib/appraisal";
+import CommentsPanel from "./CommentsPanel";
 import ImportComps from "./ImportComps";
 
-type Draft = { subject: Property; comps: Comp[]; rates: AdjustmentRates };
+type Draft = { subject: Property; comps: Comp[]; rates: AdjustmentRates; notes: string; comments: Comments };
 
 const STORAGE_KEY = "appraisalai-draft";
 
@@ -78,7 +81,13 @@ const money = (n: number | null) =>
 const pct = (n: number | null) => (n == null ? "—" : `${(n * 100).toFixed(1)}%`);
 
 function initialDraft(): Draft {
-  return { subject: emptyProperty(), comps: [emptyComp(), emptyComp(), emptyComp()], rates: defaultRates };
+  return {
+    subject: emptyProperty(),
+    comps: [emptyComp(), emptyComp(), emptyComp()],
+    rates: defaultRates,
+    notes: "",
+    comments: emptyComments(),
+  };
 }
 
 function loadDraft(): Draft {
@@ -259,6 +268,19 @@ export default function Worksheet() {
             traditional {NET_ADJ_WARN * 100}% net / {GROSS_ADJ_WARN * 100}% gross guidelines.
           </p>
         )}
+      </section>
+
+      <section className="space-y-3">
+        <h2 className="text-lg font-semibold">Comments</h2>
+        <CommentsPanel
+          subject={draft.subject}
+          comps={draft.comps}
+          rates={draft.rates}
+          notes={draft.notes}
+          comments={draft.comments}
+          onNotes={(notes) => setDraft((d) => ({ ...d, notes }))}
+          onComments={(comments) => setDraft((d) => ({ ...d, comments }))}
+        />
       </section>
     </main>
   );

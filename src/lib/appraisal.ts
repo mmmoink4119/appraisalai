@@ -151,3 +151,22 @@ export function adjustComp(subject: Property, comp: Comp, rates: AdjustmentRates
 // Traditional guideline thresholds reviewers still look at.
 export const NET_ADJ_WARN = 0.15;
 export const GROSS_ADJ_WARN = 0.25;
+
+// Narrative comment sections the appraiser writes on the report.
+export const COMMENT_SECTIONS = [
+  { key: "neighborhood", label: "Neighborhood description" },
+  { key: "marketConditions", label: "Market conditions" },
+  { key: "subjectImprovements", label: "Condition of the improvements" },
+  { key: "salesComparison", label: "Sales comparison summary" },
+  { key: "reconciliation", label: "Reconciliation" },
+] as const;
+export type CommentKey = (typeof COMMENT_SECTIONS)[number]["key"];
+export type Comments = Record<CommentKey, string>;
+
+export const CommentsSchema = z.object(
+  Object.fromEntries(COMMENT_SECTIONS.map((s) => [s.key, z.string()])) as Record<CommentKey, z.ZodString>,
+);
+
+export function emptyComments(): Comments {
+  return Object.fromEntries(COMMENT_SECTIONS.map((s) => [s.key, ""])) as Comments;
+}
