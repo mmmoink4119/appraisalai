@@ -16,7 +16,8 @@ import {
 } from "@/lib/appraisal";
 import CommentsPanel from "./CommentsPanel";
 import ImportComps from "./ImportComps";
-import { FieldGroups, PROPERTY_GROUPS, RATE_LABELS, SALE_GROUP, filledCount, money, pct } from "./fields";
+import RatingSuggestions from "./RatingSuggestions";
+import { FieldGroups, PROPERTY_GROUPS, RATE_LABELS, REMARKS_GROUP, SALE_GROUP, filledCount, money, pct } from "./fields";
 
 type Draft = { subject: Property; comps: Comp[]; rates: AdjustmentRates; notes: string; comments: Comments };
 
@@ -262,13 +263,17 @@ function CompsStep({ draft, setDraft }: StepProps) {
                 <CompStat label="Sale price" value={money(comp.salePrice)} />
                 <CompStat label="Sold" value={comp.saleDate ?? "—"} />
                 <CompStat label="GLA" value={comp.gla?.toLocaleString() ?? "—"} />
+                <CompStat
+                  label="Cond / Qual"
+                  value={`${comp.condition ? `C${comp.condition}` : "—"} / ${comp.quality ? `Q${comp.quality}` : "—"}`}
+                />
                 <CompStat label="Bd / Ba" value={`${comp.bedrooms ?? "—"} / ${comp.fullBaths ?? "—"}.${comp.halfBaths ?? 0}`} />
                 <span className="text-muted">{open === i ? "▴" : "▾"}</span>
               </button>
               {open === i && (
                 <div className="space-y-5 border-t border-line bg-background/50 px-4 py-5">
                   <PasteToFill kind="comp" onFill={(f) => setComp(i, { ...comp, ...nonNull(f) })} />
-                  <FieldGroups groups={[SALE_GROUP, ...PROPERTY_GROUPS]} value={comp} onChange={(v) => setComp(i, v)} />
+                  <FieldGroups groups={[SALE_GROUP, ...PROPERTY_GROUPS, REMARKS_GROUP]} value={comp} onChange={(v) => setComp(i, v)} />
                   <button
                     className="text-sm text-danger hover:underline"
                     onClick={() => {
@@ -284,6 +289,12 @@ function CompsStep({ draft, setDraft }: StepProps) {
           ))}
         </div>
       </section>
+      <RatingSuggestions
+        comps={draft.comps}
+        onApply={(i, ratings) =>
+          setDraft((d) => ({ ...d, comps: d.comps.map((c, j) => (j === i ? { ...c, ...ratings } : c)) }))
+        }
+      />
     </>
   );
 }

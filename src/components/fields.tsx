@@ -6,7 +6,7 @@ import { SALE_TYPES } from "@/lib/appraisal";
 export type FieldDef = {
   key: keyof Comp;
   label: string;
-  type: "text" | "number" | "bool" | "select" | "rating";
+  type: "text" | "longtext" | "number" | "bool" | "select" | "rating";
   options?: readonly string[];
   prefix?: "C" | "Q";
 };
@@ -73,6 +73,11 @@ export const SALE_GROUP: FieldGroup = {
   ],
 };
 
+export const REMARKS_GROUP: FieldGroup = {
+  title: "Listing remarks",
+  fields: [{ key: "remarks", label: "Public remarks", type: "longtext" }],
+};
+
 export const RATE_LABELS: Record<keyof AdjustmentRates, string> = {
   glaPerSqFt: "GLA $/sq ft",
   agePerYear: "Age $/year",
@@ -118,7 +123,10 @@ export function FieldGroups<T extends Property>({
           <legend className="mb-3 text-xs font-semibold uppercase tracking-wide text-muted">{group.title}</legend>
           <div className="grid grid-cols-2 gap-x-4 gap-y-3 sm:grid-cols-3 lg:grid-cols-4">
             {group.fields.map((f) => (
-              <label key={f.key} className={f.key === "address" ? "col-span-2" : ""}>
+              <label
+                key={f.key}
+                className={f.type === "longtext" ? "col-span-full" : f.key === "address" ? "col-span-2" : ""}
+              >
                 <span className="label">{f.label}</span>
                 <FieldInput field={f} value={record[f.key]} onChange={(v) => set(f.key, v)} />
               </label>
@@ -142,6 +150,15 @@ function FieldInput({ field, value, onChange }: { field: FieldDef; value: unknow
         <option value="true">Yes</option>
         <option value="false">No</option>
       </select>
+    );
+  }
+  if (field.type === "longtext") {
+    return (
+      <textarea
+        className="input min-h-24"
+        value={(value as string | null) ?? ""}
+        onChange={(e) => onChange(e.target.value === "" ? null : e.target.value)}
+      />
     );
   }
   if (field.type === "rating") {
