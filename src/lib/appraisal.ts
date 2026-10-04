@@ -26,6 +26,13 @@ export const PropertySchema = z.object({
   pool: z.boolean().nullable(),
   heatingCooling: z.string().nullable(),
   view: z.string().nullable(),
+  // Public record details shown in the URAR subject section.
+  ownerOfRecord: z.string().nullable(),
+  censusTract: z.string().nullable(),
+  zoning: z.string().nullable(),
+  assessedValue: z.number().nullable().describe("Assessor's market value, dollars"),
+  priorSaleDate: z.string().nullable().describe("Most recent recorded sale, YYYY-MM-DD"),
+  priorSalePrice: z.number().nullable(),
 });
 export type Property = z.infer<typeof PropertySchema>;
 
@@ -54,7 +61,8 @@ export function emptyProperty(): Property {
     bedrooms: null, fullBaths: null, halfBaths: null, basementSqFt: null,
     basementFinishedSqFt: null, garageSpaces: null, design: null,
     condition: null, quality: null, fireplaces: null, pool: null,
-    heatingCooling: null, view: null,
+    heatingCooling: null, view: null, ownerOfRecord: null, censusTract: null,
+    zoning: null, assessedValue: null, priorSaleDate: null, priorSalePrice: null,
   };
 }
 

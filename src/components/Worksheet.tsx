@@ -16,7 +16,8 @@ import {
 } from "@/lib/appraisal";
 import CommentsPanel from "./CommentsPanel";
 import ImportComps from "./ImportComps";
-import { FieldGroups, PROPERTY_GROUPS, RATE_LABELS, SALE_GROUP, filledCount, money, pct } from "./fields";
+import RecordLookup from "./RecordLookup";
+import { FieldGroups, PROPERTY_GROUPS, RATE_LABELS, RECORD_GROUP, SALE_GROUP, filledCount, money, pct } from "./fields";
 
 type Draft = { subject: Property; comps: Comp[]; rates: AdjustmentRates; notes: string; comments: Comments };
 
@@ -208,8 +209,9 @@ function SubjectStep({ draft, setDraft }: StepProps) {
   return (
     <section className="card">
       <StepHeading title="Subject property" detail="The property being appraised." />
+      <RecordLookup subject={draft.subject} onFill={(f) => setSubject({ ...draft.subject, ...nonNull(f) })} />
       <PasteToFill kind="subject" onFill={(f) => setSubject({ ...draft.subject, ...nonNull(f) })} />
-      <FieldGroups groups={PROPERTY_GROUPS} value={draft.subject} onChange={setSubject} />
+      <FieldGroups groups={[...PROPERTY_GROUPS, RECORD_GROUP]} value={draft.subject} onChange={setSubject} />
     </section>
   );
 }
@@ -461,7 +463,7 @@ function PasteToFill({ kind, onFill }: { kind: "subject" | "comp"; onFill: (fiel
   return (
     <details className="group mb-6 rounded-lg border border-dashed border-line bg-accent-soft/40 px-4 py-3">
       <summary className="cursor-pointer text-sm font-medium text-accent">
-        ✦ Fill from a listing or public record
+        ✦ Paste text to fill (listing sheet, tax record, notes)
       </summary>
       <div className="mt-3 space-y-2">
         <textarea

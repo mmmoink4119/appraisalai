@@ -7,6 +7,7 @@ A web app that helps fill out residential appraisal reports (URAR and UAD 3.6), 
 The worksheet is laid out as four steps (Subject, Comparables, Adjustments, Comments) and works in light and dark mode.
 
 - **Subject property form** with the main URAR fields (site, GLA, rooms, basement, garage, UAD condition/quality ratings).
+- **Philadelphia public records**: type a subject address or 9-digit OPA parcel number and the app looks it up in the city's open property data (no key needed). It fills year built, living area, lot size, bedrooms, baths, garage, central air, plus owner of record, census tract, zoning, assessed value and the last recorded sale. The city counts all bathrooms together, so split full and half baths yourself; condition, quality and basement aren't filled.
 - **Paste to fill**: paste an MLS listing sheet, public record, or notes, and Claude extracts the fields. It only fills what the text states and leaves the rest blank.
 - **Comparable sales** with the same fields plus sale price and date, list price, days on market, UAD sale type, financing, concessions and data source.
 - **MLS CSV import**: upload a CSV export of an MLS search, tick the sales to use, and they become comps. Claude matches the CSV columns to the comp fields once per export layout (the mapping is remembered and editable); without an API key, common MLS/RESO column names are matched by name.
@@ -32,6 +33,7 @@ Open http://localhost:3000.
 - `src/lib/csvImport.ts` parses MLS CSV exports and turns rows into comps using a column mapping.
 - `src/app/api/map-columns/route.ts` asks Claude to map a CSV's columns to comp fields.
 - `src/app/api/comments/route.ts` drafts the narrative comments.
+- `src/lib/phillyRecords.ts` builds the query against Philadelphia's OPA dataset (`opa_properties_public` on phl.carto.com) and maps a record to subject fields; `src/app/api/public-record/route.ts` runs it.
 - `src/app/api/extract/route.ts` calls the Claude API with structured outputs to turn pasted text into fields.
 - `src/components/Worksheet.tsx` holds the step layout; `fields.tsx` the grouped property fields; `ImportComps.tsx` and `CommentsPanel.tsx` the import and comments steps.
 

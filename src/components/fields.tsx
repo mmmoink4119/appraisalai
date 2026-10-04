@@ -58,6 +58,19 @@ export const PROPERTY_GROUPS: FieldGroup[] = [
   },
 ];
 
+// Subject only: what the county record says about ownership and history.
+export const RECORD_GROUP: FieldGroup = {
+  title: "Public record",
+  fields: [
+    { key: "ownerOfRecord", label: "Owner of record", type: "text" },
+    { key: "censusTract", label: "Census tract", type: "text" },
+    { key: "zoning", label: "Zoning", type: "text" },
+    { key: "assessedValue", label: "Assessed value ($)", type: "number" },
+    { key: "priorSaleDate", label: "Prior sale date", type: "text" },
+    { key: "priorSalePrice", label: "Prior sale price", type: "number" },
+  ],
+};
+
 export const SALE_GROUP: FieldGroup = {
   title: "Sale",
   fields: [
