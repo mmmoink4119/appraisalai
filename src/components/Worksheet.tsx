@@ -7,17 +7,19 @@ import {
   type Property,
   GROSS_ADJ_WARN,
   NET_ADJ_WARN,
+  SALE_TYPES,
   adjustComp,
   defaultRates,
   emptyComp,
   emptyProperty,
 } from "@/lib/appraisal";
+import ImportComps from "./ImportComps";
 
 type Draft = { subject: Property; comps: Comp[]; rates: AdjustmentRates };
 
 const STORAGE_KEY = "appraisalai-draft";
 
-type FieldDef = { key: keyof Comp; label: string; type: "text" | "number" | "bool" };
+type FieldDef = { key: keyof Comp; label: string; type: "text" | "number" | "bool" | "select"; options?: readonly string[] };
 
 const PROPERTY_FIELDS: FieldDef[] = [
   { key: "address", label: "Address", type: "text" },
@@ -47,6 +49,10 @@ const PROPERTY_FIELDS: FieldDef[] = [
 const SALE_FIELDS: FieldDef[] = [
   { key: "salePrice", label: "Sale price", type: "number" },
   { key: "saleDate", label: "Sale date", type: "text" },
+  { key: "listPrice", label: "List price", type: "number" },
+  { key: "daysOnMarket", label: "Days on market", type: "number" },
+  { key: "saleType", label: "Sale type", type: "select", options: SALE_TYPES },
+  { key: "financing", label: "Financing", type: "text" },
   { key: "concessions", label: "Concessions ($)", type: "number" },
   { key: "dataSource", label: "Data source", type: "text" },
 ];
@@ -97,6 +103,14 @@ export default function Worksheet() {
   const setComp = (i: number, comp: Comp) =>
     setDraft((d) => ({ ...d, comps: d.comps.map((c, j) => (j === i ? comp : c)) }));
 
+  // Imported comps fill empty comp slots first, then get appended.
+  const addComps = (incoming: Comp[]) =>
+    setDraft((d) => {
+      const queue = [...incoming];
+      const comps = d.comps.map((c) => (isEmpty(c) && queue.length ? queue.shift()! : c));
+      return { ...d, comps: [...comps, ...queue] };
+    });
+
   const results = draft.comps.map((c) => adjustComp(draft.subject, c, draft.rates));
   const adjusted = results.map((r) => r.adjustedPrice).filter((n): n is number => n != null);
 
@@ -143,6 +157,7 @@ export default function Worksheet() {
             Add comp
           </button>
         </div>
+        <ImportComps onAdd={addComps} />
         {draft.comps.map((comp, i) => (
           <details key={i} open={i === 0} className="rounded-lg border border-current/15 p-4">
             <summary className="cursor-pointer font-medium">
@@ -252,6 +267,10 @@ function warn(value: number | null, limit: number) {
   return value != null && Math.abs(value) > limit ? "text-amber-600 font-semibold" : "";
 }
 
+function isEmpty(comp: Comp) {
+  return Object.values(comp).every((v) => v == null);
+}
+
 // Only let extraction overwrite fields it actually found.
 function nonNull<T extends object>(fields: T): Partial<T> {
   return Object.fromEntries(Object.entries(fields).filter(([, v]) => v != null)) as Partial<T>;
@@ -328,6 +347,17 @@ function FieldGrid<T extends Property>({
                 <option value="">—</option>
                 <option value="true">Yes</option>
                 <option value="false">No</option>
+              </select>
+            ) : f.type === "select" ? (
+              <select
+                className="input"
+                value={(record[f.key] as string | null) ?? ""}
+                onChange={(e) => set(f.key, e.target.value || null)}
+              >
+                <option value="">—</option>
+                {f.options?.map((o) => (
+                  <option key={o} value={o}>{o}</option>
+                ))}
               </select>
             ) : (
               <input

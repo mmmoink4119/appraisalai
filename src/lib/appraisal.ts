@@ -29,11 +29,20 @@ export const PropertySchema = z.object({
 });
 export type Property = z.infer<typeof PropertySchema>;
 
+// UAD sale types, as used on the URAR and the UAD 3.6 redesign.
+export const SALE_TYPES = [
+  "ArmsLength", "REO", "ShortSale", "CourtOrdered", "Estate", "Relocation", "NonArmsLength",
+] as const;
+
 export const CompSchema = PropertySchema.extend({
   salePrice: z.number().nullable(),
   saleDate: z.string().nullable().describe("Closing date, YYYY-MM-DD"),
+  listPrice: z.number().nullable(),
+  daysOnMarket: z.number().nullable(),
+  saleType: z.enum(SALE_TYPES).nullable(),
+  financing: z.string().nullable().describe("e.g. Conventional, FHA, VA, Cash"),
   concessions: z.number().nullable().describe("Seller concessions in dollars"),
-  dataSource: z.string().nullable().describe("e.g. MLS number"),
+  dataSource: z.string().nullable().describe("e.g. MLS name and listing number"),
 });
 export type Comp = z.infer<typeof CompSchema>;
 
@@ -49,7 +58,10 @@ export function emptyProperty(): Property {
 }
 
 export function emptyComp(): Comp {
-  return { ...emptyProperty(), salePrice: null, saleDate: null, concessions: null, dataSource: null };
+  return {
+    ...emptyProperty(), salePrice: null, saleDate: null, listPrice: null, daysOnMarket: null,
+    saleType: null, financing: null, concessions: null, dataSource: null,
+  };
 }
 
 // Dollar adjustment per unit of difference. These are placeholders: the
