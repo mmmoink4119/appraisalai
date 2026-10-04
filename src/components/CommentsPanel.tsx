@@ -55,8 +55,8 @@ export default function CommentsPanel({ subject, comps, rates, notes, comments, 
 
   return (
     <div className="space-y-4">
-      <label className="block text-sm">
-        <span className="block opacity-70">
+      <label className="block">
+        <span className="label">
           Your notes for the draft: neighborhood boundaries, market trend, inspection observations, final value
         </span>
         <textarea
@@ -67,21 +67,21 @@ export default function CommentsPanel({ subject, comps, rates, notes, comments, 
         />
       </label>
       <div className="flex items-center gap-3">
-        <button className="btn" disabled={busy} onClick={draft}>
+        <button className="btn btn-primary" disabled={busy} onClick={draft}>
           {busy ? "Drafting…" : "Draft comments"}
         </button>
-        {error && <span className="text-sm text-red-600">{error}</span>}
+        {error && <span className="text-sm text-danger">{error}</span>}
       </div>
-      <p className="text-sm opacity-70">
+      <p className="text-sm text-muted">
         Drafts use only the worksheet data and your notes. Anything missing shows as a [bracketed placeholder] to fill in.
       </p>
       {COMMENT_SECTIONS.map(({ key, label }) => (
-        <label key={key} className="block text-sm">
-          <span className="flex items-center justify-between">
-            <span className="opacity-70">{label}</span>
+        <label key={key} className="block">
+          <span className="mb-1 flex items-center justify-between">
+            <span className="text-sm font-medium">{label}</span>
             <button
               type="button"
-              className="text-xs underline disabled:opacity-40"
+              className="text-xs font-medium text-accent hover:underline disabled:opacity-40"
               disabled={!comments[key].trim()}
               onClick={() => copy(key, comments[key])}
             >

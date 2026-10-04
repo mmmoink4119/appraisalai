@@ -1,35 +1,70 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #f5f6f8;
+  --foreground: #1a1d23;
+  --surface: #ffffff;
+  --line: #e2e5ea;
+  --muted: #6b7280;
+  --accent: #0f766e;
+  --accent-soft: #e6f4f2;
+  --accent-contrast: #ffffff;
+  --warn: #b45309;
+  --danger: #b91c1c;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
+  --color-surface: var(--surface);
+  --color-line: var(--line);
+  --color-muted: var(--muted);
+  --color-accent: var(--accent);
+  --color-accent-soft: var(--accent-soft);
+  --color-accent-contrast: var(--accent-contrast);
+  --color-warn: var(--warn);
+  --color-danger: var(--danger);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+    --background: #0f1115;
+    --foreground: #e8eaed;
+    --surface: #171a20;
+    --line: #2a2f38;
+    --muted: #9aa1ac;
+    --accent: #2dd4bf;
+    --accent-soft: #11302d;
+    --accent-contrast: #062421;
+    --warn: #f59e0b;
+    --danger: #f87171;
   }
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
 }
 
 @layer components {
+  .card {
+    @apply rounded-xl border border-line bg-surface p-4 sm:p-5 shadow-[0_1px_2px_rgba(0,0,0,0.04)];
+  }
+  .label {
+    @apply mb-1 block text-xs font-medium text-muted;
+  }
   .input {
-    @apply w-full rounded-md border border-current/20 bg-transparent px-2 py-1.5;
+    @apply w-full rounded-md border border-line bg-surface px-2.5 py-1.5 text-sm outline-none transition focus:border-accent focus:ring-2 focus:ring-accent/20;
   }
   .btn {
-    @apply rounded-md border border-current/25 px-3 py-1.5 text-sm font-medium hover:bg-current/5 disabled:opacity-40;
+    @apply inline-flex items-center gap-1.5 rounded-md border border-line bg-surface px-3 py-1.5 text-sm font-medium transition hover:bg-foreground/5 disabled:pointer-events-none disabled:opacity-40;
+  }
+  .btn-primary {
+    @apply border-accent bg-accent text-accent-contrast hover:bg-accent hover:opacity-90;
+  }
+  .section-title {
+    @apply text-base font-semibold;
   }
 }

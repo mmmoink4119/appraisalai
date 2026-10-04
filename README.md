@@ -4,6 +4,8 @@ A web app that helps fill out residential appraisal reports (URAR and UAD 3.6), 
 
 ## What it does today
 
+The worksheet is laid out as four steps (Subject, Comparables, Adjustments, Comments) and works in light and dark mode.
+
 - **Subject property form** with the main URAR fields (site, GLA, rooms, basement, garage, UAD condition/quality ratings).
 - **Paste to fill**: paste an MLS listing sheet, public record, or notes, and Claude extracts the fields. It only fills what the text states and leaves the rest blank.
 - **Comparable sales** with the same fields plus sale price and date, list price, days on market, UAD sale type, financing, concessions and data source.
@@ -31,7 +33,7 @@ Open http://localhost:3000.
 - `src/app/api/map-columns/route.ts` asks Claude to map a CSV's columns to comp fields.
 - `src/app/api/comments/route.ts` drafts the narrative comments.
 - `src/app/api/extract/route.ts` calls the Claude API with structured outputs to turn pasted text into fields.
-- `src/components/Worksheet.tsx` and `src/components/ImportComps.tsx` are the worksheet UI.
+- `src/components/Worksheet.tsx` holds the step layout; `fields.tsx` the grouped property fields; `ImportComps.tsx` and `CommentsPanel.tsx` the import and comments steps.
 
 ## Roadmap ideas
 
