@@ -8,18 +8,20 @@ import {
   type Property,
   COMMENT_SECTIONS,
 } from "@/lib/appraisal";
+import type { ReportData } from "@/lib/report";
 
 type Props = {
   subject: Property;
   comps: Comp[];
   rates: AdjustmentRates;
+  report: ReportData;
   notes: string;
   comments: Comments;
   onNotes: (notes: string) => void;
   onComments: (comments: Comments) => void;
 };
 
-export default function CommentsPanel({ subject, comps, rates, notes, comments, onNotes, onComments }: Props) {
+export default function CommentsPanel({ subject, comps, rates, report, notes, comments, onNotes, onComments }: Props) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState<string | null>(null);
@@ -33,7 +35,7 @@ export default function CommentsPanel({ subject, comps, rates, notes, comments, 
       const res = await fetch("/api/comments", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ subject, comps, rates, notes }),
+        body: JSON.stringify({ subject, comps, rates, report, notes }),
       });
       const body = await res.json();
       if (!res.ok) throw new Error(body.error ?? "Drafting failed");
@@ -73,7 +75,7 @@ export default function CommentsPanel({ subject, comps, rates, notes, comments, 
         {error && <span className="text-sm text-danger">{error}</span>}
       </div>
       <p className="text-sm text-muted">
-        Drafts use only the worksheet data and your notes. Anything missing shows as a [bracketed placeholder] to fill in.
+        Drafts use only what is in the report so far and your notes. Anything missing shows as a [bracketed placeholder] to fill in.
       </p>
       {COMMENT_SECTIONS.map(({ key, label }) => (
         <label key={key} className="block">
