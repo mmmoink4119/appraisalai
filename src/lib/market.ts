@@ -224,6 +224,7 @@ export function marketFields(result: MarketResult, { includeNeighborhood }: { in
   if (result.distressedShare != null) {
     out["market.foreclosureFactor"] = result.distressedShare >= 0.1;
     out["market.foreclosureTrend"] = `${Math.round(result.distressedShare * 100)}% of the sales in the past 12 months were REO, short or other distressed sales.`;
+    out["uad.distressedPct"] = Math.round(result.distressedShare * 100);
   }
   if (includeNeighborhood) {
     Object.assign(out, {

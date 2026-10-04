@@ -8,6 +8,8 @@ The app walks through the whole report in nine steps (Assignment, Subject & site
 
 - **Every URAR (Form 1004) section**: assignment and contract, subject, neighborhood, site, improvements, sales comparison (including prior sale research), cost and income approaches, reconciliation and the appraiser's certification block. Fields are defined once in `src/lib/report.ts`.
 - **Fill from documents**: upload the order or engagement letter, the agreement of sale, tax records or inspection notes (PDF, photos or text), or paste text. Claude reads them and proposes values for any field in the report, each with the quote it came from; the appraiser unticks anything wrong before it is filled.
+- **Redesigned URAR (UAD 3.6)**: pick the form on the Assignment or Report step. UAD 3.6 adds its own items to each step (valuation and inspection methods, subject listing information, disaster mitigation, energy efficient and green features, structure design and construction method, functional obsolescence, outbuildings, vehicle storage, highest and best use, market search criteria, rental information) plus an itemized list of apparent defects, damages and deficiencies. The printable report follows the redesigned URAR's section order, from Summary to Certifications, leaves out sections that don't apply (manufactured home, project, approaches not developed), and draws the Market section's absorption, days on market and price trend charts from the market conditions figures. UAD 3.6 is required for appraisals delivered from Nov 2, 2026; Form 1004 stays acceptable under a GSE exception until May 19, 2027.
+
 - **Market conditions (1004MC)**: upload an MLS export of the subject's market and the app counts sales and active listings for the prior 7-12, 4-6 and 0-3 months before the effective date, and works out absorption, months of supply, median prices, days on market, sale-to-list ratio and each trend. The same export can fill the neighborhood price and age ranges and the competing listing and sale counts. Listings count as active on a date when they were listed by then and not yet under agreement, canceled or withdrawn.
 - **Printable report** in URAR order, with the sales comparison grid, prior sales, reconciliation statement and signature block, plus a list of required items still empty. Print or save it as a PDF from the Report step.
 - **Subject property form** with the main URAR fields (site, GLA, rooms, basement, garage, UAD condition/quality ratings).
@@ -50,5 +52,4 @@ Open http://localhost:3000.
 
 - Upload MLS PDFs and county record PDFs directly.
 - Export the report in a format TOTAL can import (e.g. MISMO / UAD 3.6 XML).
-- A printable layout for the UAD 3.6 redesigned URAR.
 - Saved reports in a database instead of the browser.

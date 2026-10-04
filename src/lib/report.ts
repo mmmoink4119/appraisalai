@@ -1,7 +1,8 @@
 // The parts of the appraisal report beyond the property characteristics and
 // comps: assignment, contract, neighborhood, site, improvements, cost and
 // income approaches, reconciliation and the appraiser's certification.
-// Sections and field names follow the URAR (Fannie Mae Form 1004).
+// Sections and field names follow the URAR (Fannie Mae Form 1004), plus the
+// extra items the redesigned URAR (UAD 3.6) asks for, keyed "uad.*".
 //
 // Every field is defined once here and drives the section forms, document
 // extraction and the printed report. Values live in a flat record keyed by
@@ -21,6 +22,11 @@ export type ReportField = {
 };
 export type ReportGroup = { title: string; fields: ReportField[] };
 
+// The redesigned URAR is required for appraisals delivered from Nov 2, 2026;
+// Form 1004 stays acceptable under a GSE exception until May 19, 2027.
+export const REPORT_FORMS = ["Form 1004 (UAD 2.6)", "Redesigned URAR (UAD 3.6)"] as const;
+export const isUad36 = (report: ReportData) => report["assignment.form"] === REPORT_FORMS[1];
+
 const f = (key: string, label: string, type: FieldType, extra: Partial<ReportField> = {}): ReportField => ({
   key, label, type, ...extra,
 });
@@ -29,11 +35,18 @@ export const ASSIGNMENT_GROUPS: ReportGroup[] = [
   {
     title: "Assignment",
     fields: [
+      f("assignment.form", "Report form", "select", { options: REPORT_FORMS, hint: "Only fill if a document names the form" }),
       f("assignment.clientName", "Lender/client", "text"),
       f("assignment.clientAddress", "Lender/client address", "text"),
       f("assignment.borrower", "Borrower", "text"),
       f("assignment.fileNumber", "File #", "text", { hint: "Appraiser's or lender's file/loan number" }),
-      f("assignment.assignmentType", "Assignment type", "select", { options: ["Purchase", "Refinance", "Other"] }),
+      f("assignment.assignmentType", "Assignment type", "select", {
+        // Form 1004 has Purchase, Refinance and Other; UAD 3.6 lists the rest.
+        options: [
+          "Purchase", "Refinance", "Construction", "Home Equity", "Deed in Lieu", "Loan Modification",
+          "Portfolio Evaluation", "Preforeclosure", "REO", "Short Sale", "Other",
+        ],
+      }),
       f("assignment.propertyRights", "Property rights appraised", "select", { options: ["Fee Simple", "Leasehold", "Other"] }),
       f("assignment.occupant", "Occupant", "select", { options: ["Owner", "Tenant", "Vacant"] }),
       f("assignment.inspectionDate", "Inspection date", "date"),
@@ -405,9 +418,199 @@ export const APPRAISER_GROUPS: ReportGroup[] = [
   },
 ];
 
+// Items the redesigned URAR (UAD 3.6) adds. Each step shows its group only
+// when the report form is UAD 3.6; the rest of the report is shared.
+const INSPECTION = ["Physical", "Virtual", "No Inspection"] as const;
+
+export const UAD_ASSIGNMENT_GROUPS: ReportGroup[] = [
+  {
+    title: "UAD 3.6 assignment information",
+    fields: [
+      f("uad.valuationMethod", "Property valuation method", "select", {
+        options: ["Traditional Appraisal", "Hybrid Appraisal", "Desktop Appraisal", "Exterior Appraisal"],
+      }),
+      f("uad.exteriorInspection", "Exterior inspection method", "select", { options: INSPECTION }),
+      f("uad.interiorInspection", "Interior inspection method", "select", { options: INSPECTION }),
+      f("uad.seller", "Seller", "text"),
+      f("uad.propertyDataReport", "Property data report used", "bool", { hint: "A third-party property data collection report" }),
+      f("uad.governmentAgency", "Government agency appraisal", "select", { options: ["None", "FHA", "USDA", "VA"] }),
+      f("uad.investorId", "Investor requested special identification", "text"),
+      f("uad.appraiserFee", "Appraiser fee", "money"),
+      f("uad.amcName", "Appraisal management company", "text"),
+      f("uad.amcFee", "AMC fee", "money"),
+      f("uad.scopeOfWork", "Assignment information and scope of work commentary", "longtext"),
+    ],
+  },
+  {
+    title: "Subject listing information",
+    fields: [
+      f("uad.listingStatus", "Listing status", "select", { options: ["None", "Active", "Pending", "Off Market"] }),
+      f("uad.listPrice", "List price", "money", { hint: "Current or most recent list price of the subject" }),
+      f("uad.listDate", "List date", "date"),
+      f("uad.offMarketDate", "Off market date", "date"),
+      f("uad.listDom", "Days on market", "number"),
+    ],
+  },
+];
+
+export const UAD_SITE_GROUPS: ReportGroup[] = [
+  {
+    title: "Restrictions, encroachments and highest and best use",
+    fields: [
+      f("uad.restrictions", "Property restrictions", "text", {
+        hint: "Age, Historic Preservation, Income, Land Use, Rental or Sale Price restrictions",
+      }),
+      f("uad.encroachments", "Encroachments", "text", { hint: "Building, Driveway, Fence, Overhang or Other" }),
+      f("uad.hbuCommentary", "Highest and best use commentary", "longtext"),
+    ],
+  },
+  {
+    title: "Disaster mitigation",
+    fields: [
+      f("uad.disasterFeatures", "Disaster mitigation features", "text", {
+        hint: "e.g. hurricane straps, sump pump, flood vents, seismic bracing, fire-resistant roof",
+      }),
+      f("uad.disasterCommentary", "Disaster mitigation commentary", "longtext"),
+    ],
+  },
+  {
+    title: "Energy efficient and green features",
+    fields: [
+      f("uad.renewableEnergy", "Renewable energy components", "text", { hint: "e.g. solar panels, owned or leased" }),
+      f("uad.buildingCertifications", "Building certifications", "text", { hint: "e.g. ENERGY STAR, LEED" }),
+      f("uad.efficiencyRatings", "Efficiency ratings", "text", { hint: "e.g. HERS index score" }),
+      f("uad.greenImpact", "Impact on value and marketability", "select", { options: ["Beneficial", "Neutral", "Adverse"] }),
+      f("uad.greenCommentary", "Energy efficient and green features commentary", "longtext"),
+    ],
+  },
+];
+
+export const UAD_IMPROVEMENT_GROUPS: ReportGroup[] = [
+  {
+    title: "Dwelling exterior",
+    fields: [
+      f("uad.structureDesign", "Structure design", "select", {
+        options: ["Rowhouse/Townhouse", "Semi-Detached", "Low-rise", "Mid-rise", "High-rise", "Other"],
+      }),
+      f("uad.constructionMethod", "Construction method", "select", {
+        options: ["Site Built", "Modular", "On-Frame Modular", "Manufactured", "Container", "3D Technology", "Other"],
+      }),
+      f("uad.storiesBelowGrade", "Stories below grade", "number"),
+      f("uad.roofStructure", "Roof structure", "select", { options: ["Rafter", "Truss", "Other"] }),
+      f("uad.exteriorCommentary", "Dwelling exterior commentary", "longtext"),
+    ],
+  },
+  {
+    title: "Unit interior",
+    fields: [
+      f("uad.adu", "Includes an accessory dwelling unit (ADU)", "bool"),
+      f("uad.accessibility", "Accessibility features", "text", { hint: "e.g. ramp, wide doorways, first-floor bedroom" }),
+      f("uad.interiorCommentary", "Unit interior commentary", "longtext"),
+    ],
+  },
+  {
+    title: "Functional obsolescence",
+    fields: [
+      f("uad.functionalFeatures", "Functional obsolescence features", "text", {
+        hint: "e.g. bedroom accessed through another bedroom, no bath on the bedroom level",
+      }),
+      f("uad.functionalCommentary", "Functional obsolescence commentary", "longtext"),
+    ],
+  },
+  {
+    title: "Outbuilding",
+    fields: [
+      f("uad.outbuildingType", "Outbuilding type", "select", {
+        options: ["None", "Garage", "ADU/Garage", "Standalone ADU", "Carport", "Shed", "Barn", "Bunkhouse", "Other"],
+      }),
+      f("uad.outbuildingArea", "Outbuilding area (sq ft)", "number"),
+      f("uad.outbuildingYear", "Outbuilding year built", "number"),
+      f("uad.outbuildingCommentary", "Outbuilding commentary", "longtext"),
+    ],
+  },
+  {
+    title: "Vehicle storage",
+    fields: [
+      f("uad.vehicleStorage", "Vehicle storage type", "select", {
+        options: ["Garage", "Carport", "Driveway", "Shared Driveway", "Street Parking", "Other", "None"],
+      }),
+      f("uad.parkingSpaces", "Number of parking spaces", "number"),
+      f("uad.parkingAssignment", "Parking space assignment", "select", { options: ["Assigned", "Unassigned"] }),
+      f("uad.vehicleCommentary", "Vehicle storage commentary", "longtext"),
+    ],
+  },
+  {
+    title: "Amenities and overall quality and condition",
+    fields: [
+      f("uad.amenitiesCommentary", "Subject property amenities commentary", "longtext"),
+      f("uad.asIsCondition", "As-is overall condition", "select", {
+        options: ["C1", "C2", "C3", "C4", "C5", "C6"],
+        hint: "Only when the appraisal is made subject to repairs or completion",
+      }),
+      f("uad.qualityConditionCommentary", "Reconciliation of overall quality and condition", "longtext"),
+    ],
+  },
+];
+
+export const UAD_MARKET_GROUPS: ReportGroup[] = [
+  {
+    title: "UAD 3.6 market",
+    fields: [
+      f("uad.searchCriteria", "Search criteria", "longtext", { hint: "How the market data was selected: area, dates, property type, size" }),
+      f("uad.marketCharacteristics", "Market characteristics", "longtext"),
+      f("uad.distressedPct", "Percent of distressed sales", "number"),
+    ],
+  },
+];
+
+export const UAD_RENTAL_GROUPS: ReportGroup[] = [
+  {
+    title: "Rental information",
+    fields: [
+      f("uad.currentlyRented", "Subject is currently rented", "bool"),
+      f("uad.monthlyRent", "Current monthly rent", "money"),
+      f("uad.leaseStart", "Lease start date", "date"),
+      f("uad.rentalCommentary", "Rental information commentary", "longtext"),
+    ],
+  },
+];
+
+export const UAD_REPORT_GROUPS: ReportGroup[] = [
+  {
+    title: "Revision history and supplemental information",
+    fields: [
+      f("uad.revisionHistory", "Revision history", "longtext", { hint: "Changes made after the report was first delivered" }),
+      f("uad.supplemental", "Supplemental information", "longtext"),
+    ],
+  },
+];
+
+export const UAD_GROUPS = [
+  ...UAD_ASSIGNMENT_GROUPS, ...UAD_SITE_GROUPS, ...UAD_IMPROVEMENT_GROUPS, ...UAD_MARKET_GROUPS, ...UAD_RENTAL_GROUPS,
+  ...UAD_REPORT_GROUPS,
+];
+
+// UAD 3.6 lists each apparent defect, damage or deficiency on its own line.
+export const DEFECT_FEATURES = [
+  "Exterior Walls and Trim", "Flooring", "Foundation", "Mechanical System", "Roof", "Walls and Ceiling", "Windows", "Other",
+] as const;
+export const DEFECT_ACTIONS = ["Repair", "Inspection", "Completion", "None"] as const;
+export type Defect = {
+  feature: (typeof DEFECT_FEATURES)[number] | null;
+  location: string;
+  description: string;
+  affectsSoundness: boolean | null;
+  action: (typeof DEFECT_ACTIONS)[number] | null;
+  cost: number | null;
+};
+export const emptyDefect = (): Defect => ({
+  feature: null, location: "", description: "", affectsSoundness: null, action: null, cost: null,
+});
+
 export const ALL_REPORT_GROUPS = [
   ...ASSIGNMENT_GROUPS, ...CONTRACT_GROUPS, ...SITE_GROUPS, ...IMPROVEMENT_GROUPS, ...NEIGHBORHOOD_GROUPS,
   MARKET_TABLE_GROUP, ...MARKET_GROUPS, ...SALES_GROUPS, ...COST_GROUPS, ...INCOME_GROUPS, ...RECONCILIATION_GROUPS, ...APPRAISER_GROUPS,
+  ...UAD_GROUPS,
 ];
 export const REPORT_FIELDS = ALL_REPORT_GROUPS.flatMap((g) => g.fields);
 export const FIELD_BY_KEY = new Map(REPORT_FIELDS.map((field) => [field.key, field]));

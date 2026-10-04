@@ -7,16 +7,17 @@ import {
   type Property,
   adjustComp,
 } from "@/lib/appraisal";
-import { FIELD_BY_KEY, MC_PERIODS, MC_ROWS, formatValue, mcKey, type ReportData } from "@/lib/report";
+import { type Defect, FIELD_BY_KEY, MC_PERIODS, MC_ROWS, formatValue, isUad36, mcKey, type ReportData } from "@/lib/report";
 import { actualAge, costApproach, incomeApproach } from "@/lib/valuation";
 import { money } from "./fields";
 
-type Props = {
+export type Props = {
   subject: Property;
   comps: Comp[];
   rates: AdjustmentRates;
   report: ReportData;
   comments: Comments;
+  defects?: Defect[];
 };
 
 export type MissingItem = { step: string; label: string };
@@ -74,6 +75,15 @@ export function missingItems({ subject, comps, report, comments }: Props): Missi
   }
   need("value", "Appraisal made as is / subject to", r("reconciliation.basis"));
   need("value", "Opinion of market value", r("reconciliation.finalValue"));
+  if (isUad36(report)) {
+    need("assignment", "Property valuation method", r("uad.valuationMethod"));
+    need("assignment", "Exterior inspection method", r("uad.exteriorInspection"));
+    need("assignment", "Interior inspection method", r("uad.interiorInspection"));
+    need("assignment", "Subject listing status", r("uad.listingStatus"));
+    need("improvements", "Structure design", r("uad.structureDesign"));
+    need("improvements", "Construction method", r("uad.constructionMethod"));
+    need("neighborhood", "Market search criteria", r("uad.searchCriteria"));
+  }
   need("report", "Appraiser name", r("appraiser.name"));
   need("report", "License #", r("appraiser.licenseNumber"));
   need("report", "Signature date", r("appraiser.signatureDate"));
@@ -274,35 +284,7 @@ export default function ReportView({ subject, comps, rates, report, comments }: 
             ["Data source", v("sales.compPriorSource")],
           ]}
         />
-        <div className="overflow-x-auto">
-          <table className="w-full min-w-[480px] border-collapse">
-            <thead>
-              <tr>
-                <Th>Prior sale/transfer</Th>
-                <Th>Subject</Th>
-                {sold.map(({ n }) => (
-                  <Th key={n}>Comp {n}</Th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              <tr>
-                <Td>Date</Td>
-                <Td>{subject.priorSaleDate}</Td>
-                {sold.map(({ comp, n }) => (
-                  <Td key={n}>{comp.priorSaleDate}</Td>
-                ))}
-              </tr>
-              <tr>
-                <Td>Price</Td>
-                <Td>{subject.priorSalePrice == null ? "" : money(subject.priorSalePrice)}</Td>
-                {sold.map(({ comp, n }) => (
-                  <Td key={n}>{comp.priorSalePrice == null ? "" : money(comp.priorSalePrice)}</Td>
-                ))}
-              </tr>
-            </tbody>
-          </table>
-        </div>
+        <PriorSales subject={subject} sold={sold} />
         <Narrative label="Analysis of prior sale or transfer history" text={v("sales.priorAnalysis")} />
         <Narrative label="Summary of sales comparison approach" text={comments.salesComparison} />
         <Pairs items={[["Indicated value by sales comparison approach", v("sales.indicatedValue")]]} />
@@ -374,33 +356,7 @@ export default function ReportView({ subject, comps, rates, report, comments }: 
       )}
 
       <Section title="Market conditions addendum (1004MC)">
-        <div className="overflow-x-auto">
-          <table className="w-full min-w-[560px] border-collapse tabular-nums">
-            <thead>
-              <tr>
-                <Th>Inventory analysis</Th>
-                {MC_PERIODS.map((p) => (
-                  <Th key={p.id}>{p.label}</Th>
-                ))}
-                <Th>Overall trend</Th>
-              </tr>
-            </thead>
-            <tbody>
-              {MC_ROWS.map((row) => (
-                <tr key={row.id}>
-                  <Td>{row.label}</Td>
-                  {MC_PERIODS.map((p) => (
-                    <Td key={p.id} className="text-right">
-                      {formatValue({ type: row.type }, report[mcKey(row.id, p.id)])}
-                      {row.id === "saleToList" && report[mcKey(row.id, p.id)] != null ? "%" : ""}
-                    </Td>
-                  ))}
-                  <Td>{v(mcKey(row.id, "trend"))}</Td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+        <McTable report={report} />
         <Pairs
           items={[
             ["Seller-paid financial assistance prevalent", v("market.assistancePrevalent")],
@@ -448,20 +404,20 @@ export default function ReportView({ subject, comps, rates, report, comments }: 
   );
 }
 
-function cars(n: unknown) {
+export function cars(n: unknown) {
   return typeof n === "number" ? `${n} car${n === 1 ? "" : "s"}` : "";
 }
 
-function pctOf(s: string) {
+export function pctOf(s: string) {
   return s ? `${s}%` : "";
 }
 
-function basementFinish(p: Property) {
+export function basementFinish(p: Property) {
   if (!p.basementSqFt) return "";
   return `${Math.round(((p.basementFinishedSqFt ?? 0) / p.basementSqFt) * 100)}%`;
 }
 
-function appliances(report: ReportData) {
+export function appliances(report: ReportData) {
   const names: [string, string][] = [
     ["refrigerator", "Refrigerator"], ["range", "Range/oven"], ["dishwasher", "Dishwasher"],
     ["disposal", "Disposal"], ["microwave", "Microwave"], ["washerDryer", "Washer/dryer"],
@@ -469,7 +425,7 @@ function appliances(report: ReportData) {
   return names.filter(([k]) => report[`improvements.${k}`] === true).map(([, label]) => label).join(", ");
 }
 
-function Section({ title, children }: { title: string; children: React.ReactNode }) {
+export function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <section className="report-section break-inside-avoid-page space-y-2 border border-foreground/30">
       <h2 className="bg-foreground/[0.06] px-2 py-1 text-[11px] font-bold uppercase tracking-wider">{title}</h2>
@@ -478,12 +434,12 @@ function Section({ title, children }: { title: string; children: React.ReactNode
   );
 }
 
-function Pairs({ items, single }: { items: [string, string | null | undefined][]; single?: boolean }) {
+export function Pairs({ items, single }: { items: [string, string | null | undefined][]; single?: boolean }) {
   return (
     <dl className={`grid grid-cols-1 gap-x-4 ${single ? "" : "sm:grid-cols-2 lg:grid-cols-3 print:grid-cols-3"}`}>
       {items.map(([label, value], i) => (
         <div key={`${label}-${i}`} className="flex min-w-0 items-baseline justify-between gap-2 border-b border-foreground/10 py-0.5">
-          <dt className="min-w-0 text-muted">{label}</dt>
+          <dt className="min-w-0 max-w-[55%] shrink-0 text-muted">{label}</dt>
           <dd className={`min-w-0 text-right tabular-nums ${value ? "font-medium" : "text-muted/60"}`}>{value || "—"}</dd>
         </div>
       ))}
@@ -491,7 +447,7 @@ function Pairs({ items, single }: { items: [string, string | null | undefined][]
   );
 }
 
-function Narrative({ label, text }: { label: string; text: string | null | undefined }) {
+export function Narrative({ label, text }: { label: string; text: string | null | undefined }) {
   return (
     <div>
       <div className="text-muted">{label}</div>
@@ -500,16 +456,82 @@ function Narrative({ label, text }: { label: string; text: string | null | undef
   );
 }
 
-function Th({ children }: { children?: React.ReactNode }) {
+export function PriorSales({ subject, sold }: { subject: Property; sold: { comp: Comp; n: number }[] }) {
+  return (
+    <div className="overflow-x-auto">
+      <table className="w-full min-w-[480px] border-collapse">
+        <thead>
+          <tr>
+            <Th>Prior sale/transfer</Th>
+            <Th>Subject</Th>
+            {sold.map(({ n }) => (
+              <Th key={n}>Comp {n}</Th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <Td>Date</Td>
+            <Td>{subject.priorSaleDate}</Td>
+            {sold.map(({ comp, n }) => (
+              <Td key={n}>{comp.priorSaleDate}</Td>
+            ))}
+          </tr>
+          <tr>
+            <Td>Price</Td>
+            <Td>{subject.priorSalePrice == null ? "" : money(subject.priorSalePrice)}</Td>
+            {sold.map(({ comp, n }) => (
+              <Td key={n}>{comp.priorSalePrice == null ? "" : money(comp.priorSalePrice)}</Td>
+            ))}
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+export function McTable({ report }: { report: ReportData }) {
+  return (
+    <div className="overflow-x-auto">
+      <table className="w-full min-w-[560px] border-collapse tabular-nums">
+        <thead>
+          <tr>
+            <Th>Inventory analysis</Th>
+            {MC_PERIODS.map((p) => (
+              <Th key={p.id}>{p.label}</Th>
+            ))}
+            <Th>Overall trend</Th>
+          </tr>
+        </thead>
+        <tbody>
+          {MC_ROWS.map((row) => (
+            <tr key={row.id}>
+              <Td>{row.label}</Td>
+              {MC_PERIODS.map((p) => (
+                <Td key={p.id} className="text-right">
+                  {formatValue({ type: row.type }, report[mcKey(row.id, p.id)])}
+                  {row.id === "saleToList" && report[mcKey(row.id, p.id)] != null ? "%" : ""}
+                </Td>
+              ))}
+              <Td>{(report[mcKey(row.id, "trend")] as string | undefined) ?? ""}</Td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+export function Th({ children }: { children?: React.ReactNode }) {
   return <th className="border border-foreground/20 px-1.5 py-1 text-left font-semibold">{children}</th>;
 }
-function Td({ children, className = "" }: { children?: React.ReactNode; className?: string }) {
+export function Td({ children, className = "" }: { children?: React.ReactNode; className?: string }) {
   return <td className={`border border-foreground/20 px-1.5 py-1 align-top ${className}`}>{children}</td>;
 }
 
 type Row = { label: string; subject: string; comp: (c: Comp) => string; adjust?: string[] };
 
-function SalesGrid({
+export function SalesGrid({
   subject,
   sold,
   results,
@@ -629,5 +651,5 @@ function SalesGrid({
   );
 }
 
-const rating = (prefix: string, n: number | null) => (n == null ? "" : `${prefix}${n}`);
-const pctText = (n: number | null) => (n == null ? "—" : `${(n * 100).toFixed(1)}%`);
+export const rating = (prefix: string, n: number | null) => (n == null ? "" : `${prefix}${n}`);
+export const pctText = (n: number | null) => (n == null ? "—" : `${(n * 100).toFixed(1)}%`);
