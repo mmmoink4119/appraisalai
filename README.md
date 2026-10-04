@@ -8,6 +8,7 @@ The app walks through the whole report in nine steps (Assignment, Subject & site
 
 - **Every URAR (Form 1004) section**: assignment and contract, subject, neighborhood, site, improvements, sales comparison (including prior sale research), cost and income approaches, reconciliation and the appraiser's certification block. Fields are defined once in `src/lib/report.ts`.
 - **Fill from documents**: upload the order or engagement letter, the agreement of sale, tax records or inspection notes (PDF, photos or text), or paste text. Claude reads them and proposes values for any field in the report, each with the quote it came from; the appraiser unticks anything wrong before it is filled.
+- **Market conditions (1004MC)**: upload an MLS export of the subject's market and the app counts sales and active listings for the prior 7-12, 4-6 and 0-3 months before the effective date, and works out absorption, months of supply, median prices, days on market, sale-to-list ratio and each trend. The same export can fill the neighborhood price and age ranges and the competing listing and sale counts. Listings count as active on a date when they were listed by then and not yet under agreement, canceled or withdrawn.
 - **Printable report** in URAR order, with the sales comparison grid, prior sales, reconciliation statement and signature block, plus a list of required items still empty. Print or save it as a PDF from the Report step.
 - **Subject property form** with the main URAR fields (site, GLA, rooms, basement, garage, UAD condition/quality ratings).
 - **Philadelphia public records**: type a subject address or 9-digit OPA parcel number and the app looks it up in the city's open property data (no key needed). It fills year built, living area, lot size, bedrooms, baths, garage, central air, plus owner of record, census tract, zoning, assessed value and the last recorded sale. The city counts all bathrooms together, so split full and half baths yourself; condition, quality and basement aren't filled.
@@ -39,6 +40,7 @@ Open http://localhost:3000.
 - `src/app/api/comments/route.ts` drafts the narrative comments.
 - `src/lib/phillyRecords.ts` builds the query against Philadelphia's OPA dataset (`opa_properties_public` on phl.carto.com) and maps a record to subject fields; `src/app/api/public-record/route.ts` runs it.
 - `src/app/api/suggest-ratings/route.ts` suggests UAD condition and quality ratings from listing remarks.
+- `src/lib/market.ts` turns an MLS export into 1004MC figures (column names for Bright/Spark and RESO exports).
 - `src/lib/report.ts` defines the report sections and fields; `src/lib/valuation.ts` the cost and income approach math.
 - `src/lib/extraction.ts` + `src/app/api/extract-report/route.ts` read documents into report fields. Extraction asks for a list of key/value pairs rather than one object with a nullable field per report field, because structured outputs cap the number of nullable fields per request.
 - `src/app/api/extract/route.ts` calls the Claude API with structured outputs to turn pasted text into fields.
@@ -49,5 +51,4 @@ Open http://localhost:3000.
 - Upload MLS PDFs and county record PDFs directly.
 - Export the report in a format TOTAL can import (e.g. MISMO / UAD 3.6 XML).
 - A printable layout for the UAD 3.6 redesigned URAR.
-- 1004MC market conditions figures from the full MLS export.
 - Saved reports in a database instead of the browser.

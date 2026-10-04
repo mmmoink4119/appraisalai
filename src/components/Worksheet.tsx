@@ -35,6 +35,7 @@ import { costApproach, incomeApproach } from "@/lib/valuation";
 import CommentsPanel from "./CommentsPanel";
 import DocumentIntake from "./DocumentIntake";
 import ImportComps from "./ImportComps";
+import MarketConditions from "./MarketConditions";
 import ReportFields from "./ReportFields";
 import ReportView, { missingItems } from "./ReportView";
 import RatingSuggestions from "./RatingSuggestions";
@@ -225,13 +226,20 @@ export default function Worksheet() {
           />
         )}
         {step === "neighborhood" && (
-          <ReportSection
-            draft={draft}
-            setDraft={setDraft}
-            title="Neighborhood"
-            detail="The neighborhood description and market conditions comments are drafted on the Comments step."
-            groups={NEIGHBORHOOD_GROUPS}
-          />
+          <>
+            <ReportSection
+              draft={draft}
+              setDraft={setDraft}
+              title="Neighborhood"
+              detail="The neighborhood description and market conditions comments are drafted on the Comments step."
+              groups={NEIGHBORHOOD_GROUPS}
+            />
+            <MarketConditions
+              report={draft.report}
+              onChange={setReportField(setDraft)}
+              onFill={(fields) => setDraft((d) => ({ ...d, report: { ...d.report, ...fields } }))}
+            />
+          </>
         )}
         {step === "comps" && <CompsStep draft={draft} setDraft={setDraft} />}
         {step === "grid" && <GridStep draft={draft} setDraft={setDraft} />}

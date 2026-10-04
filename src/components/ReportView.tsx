@@ -7,7 +7,7 @@ import {
   type Property,
   adjustComp,
 } from "@/lib/appraisal";
-import { FIELD_BY_KEY, formatValue, type ReportData } from "@/lib/report";
+import { FIELD_BY_KEY, MC_PERIODS, MC_ROWS, formatValue, mcKey, type ReportData } from "@/lib/report";
 import { actualAge, costApproach, incomeApproach } from "@/lib/valuation";
 import { money } from "./fields";
 
@@ -59,6 +59,7 @@ export function missingItems({ subject, comps, report, comments }: Props): Missi
   need("neighborhood", "Property values", r("neighborhood.propertyValues"));
   need("neighborhood", "Price range", r("neighborhood.priceLow"));
   need("neighborhood", "Boundaries", r("neighborhood.boundaries"));
+  need("neighborhood", "Market conditions figures (1004MC)", r(mcKey("salesCount", "p03")));
   const sold = comps.filter((c) => c.salePrice != null).length;
   if (sold < 3) out.push({ step: "comps", label: `${3 - sold} more closed comp${sold === 2 ? "" : "s"}` });
   need("grid", "Indicated value by sales comparison", r("sales.indicatedValue"));
@@ -371,6 +372,46 @@ export default function ReportView({ subject, comps, rates, report, comments }: 
           <Narrative label="Summary of income approach" text={v("income.comments")} />
         </Section>
       )}
+
+      <Section title="Market conditions addendum (1004MC)">
+        <div className="overflow-x-auto">
+          <table className="w-full min-w-[560px] border-collapse tabular-nums">
+            <thead>
+              <tr>
+                <Th>Inventory analysis</Th>
+                {MC_PERIODS.map((p) => (
+                  <Th key={p.id}>{p.label}</Th>
+                ))}
+                <Th>Overall trend</Th>
+              </tr>
+            </thead>
+            <tbody>
+              {MC_ROWS.map((row) => (
+                <tr key={row.id}>
+                  <Td>{row.label}</Td>
+                  {MC_PERIODS.map((p) => (
+                    <Td key={p.id} className="text-right">
+                      {formatValue({ type: row.type }, report[mcKey(row.id, p.id)])}
+                      {row.id === "saleToList" && report[mcKey(row.id, p.id)] != null ? "%" : ""}
+                    </Td>
+                  ))}
+                  <Td>{v(mcKey(row.id, "trend"))}</Td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        <Pairs
+          items={[
+            ["Seller-paid financial assistance prevalent", v("market.assistancePrevalent")],
+            ["Foreclosure sales (REO) a factor", v("market.foreclosureFactor")],
+            ["Data sources", v("market.dataSources")],
+          ]}
+        />
+        <Narrative label="Trends in seller concessions" text={v("market.assistanceTrend")} />
+        <Narrative label="Foreclosure and short sale activity" text={v("market.foreclosureTrend")} />
+        <Narrative label="Summary of market conditions" text={v("market.summary")} />
+      </Section>
 
       <Section title="Appraiser">
         <div className="grid gap-4 sm:grid-cols-2 print:grid-cols-2">

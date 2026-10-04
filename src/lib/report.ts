@@ -254,6 +254,54 @@ export const NEIGHBORHOOD_GROUPS: ReportGroup[] = [
   },
 ];
 
+// Market Conditions Addendum (Fannie Mae Form 1004MC): each figure for the
+// three periods before the effective date, plus the overall trend.
+export const MC_PERIODS = [
+  { id: "p712", label: "Prior 7-12 months", months: 6 },
+  { id: "p46", label: "Prior 4-6 months", months: 3 },
+  { id: "p03", label: "Current-3 months", months: 3 },
+] as const;
+export type McPeriod = (typeof MC_PERIODS)[number]["id"];
+export const TRENDS = ["Increasing", "Stable", "Declining"] as const;
+
+export const MC_ROWS = [
+  { id: "salesCount", label: "Total # of comparable sales (settled)", type: "number" },
+  { id: "absorption", label: "Absorption rate (total sales/months)", type: "number" },
+  { id: "listings", label: "Total # of comparable active listings", type: "number" },
+  { id: "supply", label: "Months of housing supply (total listings/ab. rate)", type: "number" },
+  { id: "medianSalePrice", label: "Median comparable sale price", type: "money" },
+  { id: "medianSaleDom", label: "Median comparable sales days on market", type: "number" },
+  { id: "medianListPrice", label: "Median comparable list price", type: "money" },
+  { id: "medianListDom", label: "Median comparable listings days on market", type: "number" },
+  { id: "saleToList", label: "Median sale price as % of list price", type: "number" },
+] as const;
+export type McRow = (typeof MC_ROWS)[number]["id"];
+export const mcKey = (row: McRow, period: McPeriod | "trend") => `market.${row}.${period}`;
+
+export const MARKET_TABLE_GROUP: ReportGroup = {
+  title: "Market conditions figures",
+  fields: MC_ROWS.flatMap((row) => [
+    ...MC_PERIODS.map((p) => f(mcKey(row.id, p.id), `${row.label}, ${p.label.toLowerCase()}`, row.type)),
+    f(mcKey(row.id, "trend"), `${row.label}, overall trend`, "select", { options: TRENDS }),
+  ]),
+};
+
+export const MARKET_GROUPS: ReportGroup[] = [
+  {
+    title: "Market conditions notes",
+    fields: [
+      f("market.assistancePrevalent", "Seller-paid financial assistance prevalent", "bool"),
+      f("market.assistanceTrend", "Trends in seller concessions", "longtext", {
+        hint: "e.g. typical concession amounts and whether they are rising or falling",
+      }),
+      f("market.foreclosureFactor", "Foreclosure sales (REO) a factor in the market", "bool"),
+      f("market.foreclosureTrend", "Foreclosure and short sale activity", "longtext"),
+      f("market.dataSources", "Data sources for the figures above", "text", { hint: "e.g. Bright MLS" }),
+      f("market.summary", "Summary of market conditions and support for the conclusions", "longtext"),
+    ],
+  },
+];
+
 export const SALES_GROUPS: ReportGroup[] = [
   {
     title: "Competing listings and sales",
@@ -359,7 +407,7 @@ export const APPRAISER_GROUPS: ReportGroup[] = [
 
 export const ALL_REPORT_GROUPS = [
   ...ASSIGNMENT_GROUPS, ...CONTRACT_GROUPS, ...SITE_GROUPS, ...IMPROVEMENT_GROUPS, ...NEIGHBORHOOD_GROUPS,
-  ...SALES_GROUPS, ...COST_GROUPS, ...INCOME_GROUPS, ...RECONCILIATION_GROUPS, ...APPRAISER_GROUPS,
+  MARKET_TABLE_GROUP, ...MARKET_GROUPS, ...SALES_GROUPS, ...COST_GROUPS, ...INCOME_GROUPS, ...RECONCILIATION_GROUPS, ...APPRAISER_GROUPS,
 ];
 export const REPORT_FIELDS = ALL_REPORT_GROUPS.flatMap((g) => g.fields);
 export const FIELD_BY_KEY = new Map(REPORT_FIELDS.map((field) => [field.key, field]));
